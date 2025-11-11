@@ -2,12 +2,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
-import { getSuggestions, searchProducts, toProductCard } from '../data/products';
+import { useCatalog } from '../contexts/catalog-context';
+import { formatMoney, searchProducts } from '../lib/shopify';
 
 const SearchPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialQuery = searchParams.get('q') ?? '';
   const [query, setQuery] = useState(initialQuery);
+  const { products: catalogProducts } = useCatalog();
+  const [productResults, setProductResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     setQuery(initialQuery);
@@ -15,12 +20,63 @@ const SearchPage = () => {
 
   const trimmedQuery = initialQuery.trim();
 
-  const productResults = useMemo(() => {
-    if (!trimmedQuery) return [];
-    return searchProducts(trimmedQuery, 24).map(toProductCard);
+  useEffect(() => {
+    if (!trimmedQuery) {
+      setProductResults([]);
+      setError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    searchProducts(trimmedQuery, 24)
+      .then((nodes) => {
+        if (cancelled) return;
+        const cards =
+          nodes?.map((node) => ({
+            title: node?.title ?? 'Product',
+            price: formatMoney(
+              node?.priceRange?.minVariantPrice?.amount,
+              node?.priceRange?.minVariantPrice?.currencyCode,
+            ),
+            img: node?.featuredImage?.url ?? '',
+            href: `/product/${node?.handle}`,
+            badge: node?.tags?.includes('new') ? 'New' : undefined,
+          })) ?? [];
+        setProductResults(cards.filter((card) => card.href));
+      })
+      .catch((searchError) => {
+        console.error('Search request failed', searchError);
+        if (!cancelled) {
+          setError('We could not fetch search results. Please try again.');
+          setProductResults([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [trimmedQuery]);
 
-  const suggestions = useMemo(() => getSuggestions(trimmedQuery), [trimmedQuery]);
+  const suggestions = useMemo(() => {
+    const sourceTitles = (catalogProducts ?? []).map((product) => product.title).filter(Boolean);
+    if (!trimmedQuery) {
+      return sourceTitles.slice(0, 6);
+    }
+    const normalized = trimmedQuery.toLowerCase();
+    const matches = sourceTitles.filter((title) =>
+      title.toLowerCase().includes(normalized),
+    );
+    const unique = Array.from(new Set([...matches, ...sourceTitles])).filter(Boolean);
+    return unique.slice(0, 6);
+  }, [catalogProducts, trimmedQuery]);
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -77,7 +133,13 @@ const SearchPage = () => {
 
         <div>
           {trimmedQuery ? (
-            productResults.length > 0 ? (
+            loading ? (
+              <p className="text-sm uppercase tracking-[0.3em] text-neutral-500">
+                Searching for “{trimmedQuery}”…
+              </p>
+            ) : error ? (
+              <p className="text-sm uppercase tracking-[0.3em] text-red-600">{error}</p>
+            ) : productResults.length > 0 ? (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {productResults.map((item) => (
                   <ProductCard key={item.href} item={item} />

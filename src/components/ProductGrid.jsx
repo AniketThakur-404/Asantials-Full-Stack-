@@ -1,5 +1,5 @@
 import React from "react";
-import { motion } from "framer-motion";
+import { motion as Motion } from "framer-motion";
 import { ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import ProductCard from "./ProductCard";
@@ -31,7 +31,7 @@ export default function ProductGrid({ title, products, ctaHref = "/products", ct
       {/* Four-up on large screens with consistent spacing */}
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-4 md:gap-5 lg:grid-cols-4 lg:gap-2">
         {products.map((item, idx) => (
-          <motion.div
+          <Motion.div
             key={item.title + idx}
             variants={cardVariants}
             initial="hidden"
@@ -40,7 +40,7 @@ export default function ProductGrid({ title, products, ctaHref = "/products", ct
             className="h-full"
           >
             <ProductCard item={item} />
-          </motion.div>
+          </Motion.div>
         ))}
       </div>
 
@@ -55,3 +55,4 @@ export default function ProductGrid({ title, products, ctaHref = "/products", ct
     </section>
   );
 }
+

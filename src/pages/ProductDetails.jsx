@@ -2,14 +2,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
-import {
-  formatPrice,
-  getProductBySlug,
-  getRelatedProducts,
-  toProductCard,
-} from '../data/products';
 import { useCart } from '../contexts/cart-context';
 import { useNotifications } from '../components/NotificationProvider';
+import { useCatalog } from '../contexts/catalog-context';
+import {
+  fetchProductByHandle,
+  fetchRecommendedProducts,
+  formatMoney,
+  getSubheadingFromProduct,
+} from '../lib/shopify';
 
 const Breadcrumbs = ({ title, className = '' }) => (
   <nav
@@ -44,7 +45,7 @@ const NotFound = () => (
     </p>
     <Link
       to="/"
-      className="rounded-full border border-neutral-900 px-6 py-3 text-[11px] uppercase tracking-[0.32em] transition hover:bg-neutral-900 hover:text-white"
+      className="border border-neutral-900 px-6 py-3 text-[11px] uppercase tracking-[0.32em] transition hover:bg-neutral-900 hover:text-white"
     >
       Back to Shop
     </Link>
@@ -58,40 +59,178 @@ const ProductDetails = () => {
   const { openCartDrawer } = useOutletContext() ?? {};
   const { addItem } = useCart();
   const { notify } = useNotifications();
-  const product = getProductBySlug(slug);
-  const [selectedSize, setSelectedSize] = useState(product?.sizes?.[0] ?? null);
+  const { getProduct } = useCatalog();
+  const initialProduct = getProduct(slug);
+  const [product, setProduct] = useState(initialProduct ?? null);
+  const [loading, setLoading] = useState(!initialProduct);
+  const [error, setError] = useState(null);
+  const [relatedProducts, setRelatedProducts] = useState([]);
+  const [selectedSize, setSelectedSize] = useState(null);
   const [pincode, setPincode] = useState('');
+  const [sizeChartOpen, setSizeChartOpen] = useState(false);
 
   useEffect(() => {
-    setSelectedSize(product?.sizes?.[0] ?? null);
-    setPincode('');
-  }, [product]);
+    let cancelled = false;
+
+    async function loadProduct() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const catalogProduct = getProduct(slug);
+        const fetchedProduct = catalogProduct ?? (await fetchProductByHandle(slug));
+
+        if (!cancelled) {
+          setProduct(fetchedProduct ?? null);
+        }
+
+        if (fetchedProduct?.id) {
+          try {
+            const recommendations = await fetchRecommendedProducts(fetchedProduct.id, 4);
+            if (!cancelled) {
+              const recommendationCards =
+                recommendations?.map((item) => {
+                  const amount = item?.priceRange?.minVariantPrice?.amount;
+                  const currency = item?.priceRange?.minVariantPrice?.currencyCode;
+                  return {
+                    title: item?.title ?? 'Recommended Item',
+                    price: formatMoney(amount, currency),
+                    img: item?.featuredImage?.url ?? '',
+                    href: `/product/${item?.handle}`,
+                    badge: item?.tags?.includes('new') ? 'New' : undefined,
+                  };
+                }) ?? [];
+              setRelatedProducts(recommendationCards.filter(Boolean));
+            }
+          } catch (recommendationError) {
+            console.warn('Unable to load recommended products', recommendationError);
+            if (!cancelled) {
+              setRelatedProducts([]);
+            }
+          }
+        } else if (!cancelled) {
+          setRelatedProducts([]);
+        }
+      } catch (productError) {
+        console.error(`Failed to load product "${slug}"`, productError);
+        if (!cancelled) {
+          setError(productError);
+          setProduct(null);
+          setRelatedProducts([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadProduct();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [slug, getProduct]);
+
+  const sizeOptions = useMemo(() => product?.optionValues?.size ?? [], [product]);
+  const hasSizes = sizeOptions.length > 0;
 
   useEffect(() => {
     if (!product) return;
     const focusSize = location.state?.focusSize;
-    if (focusSize && product.sizes?.includes(focusSize)) {
-      setSelectedSize(focusSize);
+    if (
+      focusSize &&
+      sizeOptions.some(
+        (option) => option?.toLowerCase() === focusSize.toString().toLowerCase(),
+      )
+    ) {
+      const matched =
+        sizeOptions.find(
+          (option) => option?.toLowerCase() === focusSize.toString().toLowerCase(),
+        ) ?? sizeOptions[0] ?? null;
+      setSelectedSize(matched);
+    } else {
+      setSelectedSize(sizeOptions[0] ?? null);
     }
-  }, [location.state, product]);
+    setPincode('');
+  }, [product, sizeOptions, location.state]);
 
-  const hasSizes = (product?.sizes?.length ?? 0) > 0;
+  const getMetafieldValue = (keys) => {
+    if (!product?.metafields?.length) return null;
+    const keyList = Array.isArray(keys)
+      ? keys.map((key) => key.toLowerCase())
+      : [keys.toLowerCase()];
+    const entry = product.metafields.find((field) =>
+      keyList.includes(field?.key?.toLowerCase() ?? ''),
+    );
+    return entry?.value ?? null;
+  };
 
-  const relatedProducts = useMemo(() => {
-    if (!product) return [];
-    return getRelatedProducts(product.slug).map((item) => toProductCard(item));
-  }, [product]);
+  const materialsInfo =
+    getMetafieldValue(['materials', 'material']) ??
+    'Crafted with premium materials chosen for durability and comfort.';
+  const weightInfo =
+    getMetafieldValue(['weight', 'fabric_weight']) ??
+    'Balanced fabric weight engineered for everyday layering.';
+  const careInfo =
+    getMetafieldValue(['care', 'wash_care']) ??
+    'Machine wash cold with like colours. Do not tumble dry. Cool iron on reverse.';
+  const shippingInfo =
+    getMetafieldValue(['shipping']) ??
+    'Complimentary pan-India shipping. International duties calculated at checkout.';
 
-  if (!product) {
+  const sizeChartSource =
+    getMetafieldValue(['size_chart_json', 'size_chart']) ?? null;
+
+  const sizeChartRows = useMemo(() => {
+    if (sizeChartSource) {
+      try {
+        const parsed = JSON.parse(sizeChartSource);
+        if (Array.isArray(parsed)) {
+          return parsed
+            .map((entry) => ({
+              size: entry.size ?? entry.label ?? entry.title ?? entry.name,
+              chest: entry.chest ?? entry.bust ?? entry.width ?? entry['chest (in)'],
+              shoulder: entry.shoulder ?? entry['shoulder (in)'] ?? entry.across,
+              length: entry.length ?? entry['length (in)'] ?? entry.height,
+            }))
+            .filter((entry) => entry.size);
+        }
+      } catch (error) {
+        console.warn('Unable to parse size chart metafield', error);
+      }
+    }
+    if (!hasSizes) return null;
+    return sizeOptions.map((size, index) => ({
+      size,
+      chest: `${40 + index * 2}"`,
+      shoulder: `${16 + index * 0.5}"`,
+      length: `${26 + index * 0.5}"`,
+    }));
+  }, [sizeChartSource, hasSizes, sizeOptions]);
+
+  const hasSizeChart = Boolean(sizeChartRows?.length);
+
+  if (loading) {
+    return (
+      <section className="mx-auto flex max-w-3xl flex-col items-center gap-6 px-4 py-24 text-center">
+        <p className="text-sm uppercase tracking-[0.35em] text-neutral-500">
+          Loading product…
+        </p>
+      </section>
+    );
+  }
+
+  if (!product || error) {
     return <NotFound />;
   }
 
   const handleAddToCart = () => {
-    const size = selectedSize ?? product.sizes?.[0] ?? null;
-    addItem(product.slug, { size: hasSizes ? size : null });
+    const size = selectedSize ?? sizeOptions[0] ?? null;
+    addItem(product.handle, { size: hasSizes ? size : null });
     notify({
       title: 'Added to Cart',
-      message: `${product.title}${hasSizes && size ? ` · Size ${size}` : ''}`,
+      message: `${product.title}${hasSizes && size ? ` - Size ${size}` : ''}`,
       actionLabel: 'View Cart',
       onAction: () => navigate('/cart'),
     });
@@ -99,8 +238,8 @@ const ProductDetails = () => {
   };
 
   const handleBuyNow = () => {
-    const size = selectedSize ?? product.sizes?.[0] ?? null;
-    addItem(product.slug, { size: hasSizes ? size : null });
+    const size = selectedSize ?? sizeOptions[0] ?? null;
+    addItem(product.handle, { size: hasSizes ? size : null });
     if (openCartDrawer) {
       openCartDrawer();
     } else {
@@ -108,61 +247,89 @@ const ProductDetails = () => {
     }
   };
 
+  const priceLabel = formatMoney(product.price, product.currencyCode);
+  const subheading = getSubheadingFromProduct(product);
+  const descriptionHtml = product.descriptionHtml ?? `<p>${product.description ?? ''}</p>`;
+
+  const featureTags = product.tags?.slice(0, 4) ?? [];
+
   return (
-    <article className="bg-white">
-      <div className="mx-auto w-full max-w-7xl px-4 pb-20 pt-8 sm:px-6 lg:px-8">
-        <div className="gap-y-10 lg:grid lg:grid-cols-12 lg:gap-x-10">
-          <div className="lg:col-span-3 space-y-6 lg:sticky lg:top-32 lg:self-start">
+    <article className="bg-neutral-50 text-neutral-900">
+      <div className="mx-auto w-full max-w-[1600px] px-4 py-12 sm:px-6 md:px-8 lg:px-2">
+        <div className="grid gap-y-12 lg:grid-cols-[320px_minmax(0,1fr)_360px] lg:gap-x-12">
+          <div className="space-y-8 lg:sticky lg:top-28 lg:self-start">
             <Breadcrumbs title={product.title} className="mb-6" />
-            <div>
+            <div className="space-y-2">
               <h1 className="text-3xl font-semibold uppercase tracking-[0.25em] text-neutral-900">
-                {product.headline ?? product.title}
+                {product.title}
               </h1>
-              <p className="mt-3 text-lg tracking-[0.18em] text-neutral-600">
-                {formatPrice(product.price)}
-              </p>
+              {subheading?.text && (
+                <p className="mt-2 text-sm uppercase tracking-[0.3em] text-neutral-500">
+                  {subheading.text}
+                </p>
+              )}
+              {subheading?.html && (
+                <div
+                  className="mt-2 text-sm uppercase tracking-[0.3em] text-neutral-500"
+                  dangerouslySetInnerHTML={{ __html: subheading.html }}
+                />
+              )}
+              <p className="mt-3 text-lg tracking-[0.18em] text-neutral-600">{priceLabel}</p>
             </div>
 
-            <div className="space-y-5 text-sm leading-relaxed text-neutral-600">
-              <section>
+            <div className="space-y-6 text-sm leading-relaxed text-neutral-600">
+              <section className="space-y-3">
                 <h2 className="mb-2 text-[11px] uppercase tracking-[0.35em] text-neutral-500">
                   Description
                 </h2>
-                <p>{product.description}</p>
+                <div
+                  className="prose prose-sm max-w-none text-neutral-600"
+                  dangerouslySetInnerHTML={{ __html: descriptionHtml }}
+                />
               </section>
-              <section>
+              <section className="space-y-3 border-t border-neutral-200 pt-4">
                 <h2 className="mb-2 text-[11px] uppercase tracking-[0.35em] text-neutral-500">
                   Details
                 </h2>
-                <p>{product.details}</p>
+                <p>{materialsInfo}</p>
+                {featureTags.length > 0 && (
+                  <ul className="mt-3 space-y-1 text-[10px] uppercase tracking-[0.3em] text-neutral-500">
+                    {featureTags.map((tag) => (
+                      <li key={tag}>#{tag}</li>
+                    ))}
+                  </ul>
+                )}
               </section>
-              <section className="flex flex-wrap gap-6 text-xs uppercase tracking-[0.25em] text-neutral-700">
-                <span>{product.weight}</span>
-                <span>{product.care}</span>
+              <section className="flex flex-wrap gap-6 border-t border-neutral-200 pt-4 text-xs uppercase tracking-[0.25em] text-neutral-700">
+                <span>{weightInfo}</span>
+                <span>{careInfo}</span>
               </section>
-              <section>
+              <section className="space-y-3 border-t border-neutral-200 pt-4">
                 <h2 className="mb-2 text-[11px] uppercase tracking-[0.35em] text-neutral-500">
                   Shipping
                 </h2>
-                <p>{product.shipping}</p>
+                <p>{shippingInfo}</p>
               </section>
             </div>
           </div>
 
-          <div className="my-10 space-y-4 lg:col-span-5 lg:my-0">
-            {product.images.map((src, index) => (
-              <img
-                key={src ?? index}
-                src={src}
-                alt={`${product.title} view ${index + 1}`}
-                className="w-full rounded-lg bg-neutral-100 object-cover"
-                loading={index === 0 ? 'eager' : 'lazy'}
-              />
-            ))}
+          <div className="space-y-8">
+            {(product.images ?? [])
+              .filter((image) => image?.url)
+              .map((image, index) => (
+                <img
+                  key={image.url ?? index}
+                  src={image.url}
+                  alt={image.alt ?? `${product.title} view ${index + 1}`}
+                  className="w-full border border-neutral-200 bg-neutral-200 object-cover"
+                  loading={index === 0 ? 'eager' : 'lazy'}
+                />
+              ))}
           </div>
 
-          <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-32 lg:self-start">
-            {hasSizes && (
+          <div className="lg:sticky lg:top-28 lg:self-start">
+            <div className="space-y-6 border border-neutral-200 bg-white p-6">
+              {hasSizes && (
               <section>
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-[11px] uppercase tracking-[0.35em] text-neutral-500">
@@ -170,18 +337,24 @@ const ProductDetails = () => {
                   </h2>
                   <button
                     type="button"
-                    className="text-[10px] uppercase tracking-[0.3em] text-neutral-900 underline-offset-4 transition hover:underline"
+                    onClick={() => hasSizeChart && setSizeChartOpen(true)}
+                    disabled={!hasSizeChart}
+                    className={`text-[10px] uppercase tracking-[0.3em] underline-offset-4 transition ${
+                      hasSizeChart
+                        ? 'text-neutral-900 hover:underline'
+                        : 'cursor-not-allowed text-neutral-300'
+                    }`}
                   >
-                    Size Guide
+                    Size Chart
                   </button>
                 </div>
                 <div className="grid grid-cols-4 gap-3">
-                  {product.sizes.map((size) => (
+                  {sizeOptions.map((size) => (
                     <button
                       key={size}
                       type="button"
                       onClick={() => setSelectedSize(size)}
-                      className={`rounded-lg border px-3 py-3 text-xs font-semibold uppercase tracking-[0.25em] transition ${
+                      className={`border px-3 py-3 text-xs font-semibold uppercase tracking-[0.25em] transition ${
                         selectedSize === size
                           ? 'border-neutral-900 bg-neutral-900 text-white'
                           : 'border-neutral-200 text-neutral-700 hover:border-neutral-900'
@@ -198,7 +371,7 @@ const ProductDetails = () => {
               <input
                 type="checkbox"
                 id="giftCard"
-                className="h-4 w-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-900"
+                className="h-4 w-4 border border-neutral-300 text-neutral-900 focus:ring-neutral-900"
               />
               <label htmlFor="giftCard" className="text-neutral-600">
                 Have a gift card?
@@ -209,14 +382,14 @@ const ProductDetails = () => {
               <button
                 type="button"
                 onClick={handleAddToCart}
-                className="w-full rounded-full bg-neutral-900 py-4 text-[11px] uppercase tracking-[0.35em] text-white transition-transform duration-200 hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2 active:scale-95"
+                className="w-full border border-neutral-900 bg-neutral-900 py-4 text-[11px] uppercase tracking-[0.35em] text-white transition-transform duration-200 hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2 active:scale-95"
               >
                 Add to Cart
               </button>
               <button
                 type="button"
                 onClick={handleBuyNow}
-                className="w-full rounded-full border border-neutral-900 py-4 text-[11px] uppercase tracking-[0.35em] text-neutral-900 transition-transform duration-200 hover:bg-neutral-900 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2 active:scale-95"
+                className="w-full border border-neutral-900 py-4 text-[11px] uppercase tracking-[0.35em] text-neutral-900 transition-transform duration-200 hover:bg-neutral-900 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2 active:scale-95"
               >
                 Buy Now
               </button>
@@ -226,17 +399,17 @@ const ProductDetails = () => {
               <h2 className="text-[11px] uppercase tracking-[0.35em] text-neutral-500">
                 Delivery Details
               </h2>
-              <div className="flex gap-3">
+              <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-3">
                 <input
                   type="text"
                   value={pincode}
                   onChange={(event) => setPincode(event.target.value)}
                   placeholder="Enter your pincode"
-                  className="flex-1 rounded-full border border-neutral-200 px-5 py-3 text-sm tracking-[0.2em] text-neutral-700 placeholder:text-neutral-400 focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                  className="h-full border border-neutral-200 px-5 py-3 text-sm tracking-[0.2em] text-neutral-700 placeholder:text-neutral-400 focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
                 />
                 <button
                   type="button"
-                  className="rounded-full border border-neutral-900 px-6 py-3 text-[11px] uppercase tracking-[0.32em] text-neutral-900 transition hover:bg-neutral-900 hover:text-white"
+                  className="flex h-full items-center justify-center border border-neutral-900 px-5 text-[11px] uppercase tracking-[0.32em] text-neutral-900 transition hover:bg-neutral-900 hover:text-white"
                   onClick={() => {
                     if (!pincode.trim()) return;
                     window.alert(`Checking delivery availability for ${pincode.trim()}`);
@@ -247,6 +420,7 @@ const ProductDetails = () => {
               </div>
             </section>
           </div>
+        </div>
         </div>
 
         {relatedProducts.length > 0 && (
@@ -265,8 +439,61 @@ const ProductDetails = () => {
           </section>
         )}
       </div>
+
+      {sizeChartOpen && hasSizeChart && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-10">
+          <div
+            className="absolute inset-0 bg-black/60"
+            onClick={() => setSizeChartOpen(false)}
+          />
+          <div className="relative z-10 w-full max-w-3xl border border-neutral-200 bg-white p-8">
+            <div className="flex items-center justify-between border-b border-neutral-200 pb-4">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.35em] text-neutral-500">Size Chart</p>
+                <p className="text-xs uppercase tracking-[0.3em] text-neutral-400">
+                  Measurements in inches
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSizeChartOpen(false)}
+                className="text-[11px] uppercase tracking-[0.35em] text-neutral-500 underline-offset-4 transition hover:text-neutral-900 hover:underline"
+              >
+                Close
+              </button>
+            </div>
+            <div className="mt-6 overflow-x-auto">
+              <table className="w-full border-collapse text-sm text-neutral-700">
+                <thead className="text-[11px] uppercase tracking-[0.25em] text-neutral-500">
+                  <tr>
+                    <th className="border-b border-neutral-200 px-3 py-2 text-left">Size</th>
+                    <th className="border-b border-neutral-200 px-3 py-2 text-left">Chest</th>
+                    <th className="border-b border-neutral-200 px-3 py-2 text-left">Shoulder</th>
+                    <th className="border-b border-neutral-200 px-3 py-2 text-left">Length</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sizeChartRows.map((row) => (
+                    <tr key={row.size} className="text-neutral-700">
+                      <td className="border-b border-neutral-100 px-3 py-2 text-[11px] uppercase tracking-[0.3em]">
+                        {row.size}
+                      </td>
+                      <td className="border-b border-neutral-100 px-3 py-2">{row.chest ?? '-'}</td>
+                      <td className="border-b border-neutral-100 px-3 py-2">{row.shoulder ?? '-'}</td>
+                      <td className="border-b border-neutral-100 px-3 py-2">{row.length ?? '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
     </article>
   );
 };
 
 export default ProductDetails;
+
+
+

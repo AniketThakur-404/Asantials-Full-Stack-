@@ -1,4 +1,5 @@
 // src/components/NotificationProvider.jsx
+/* eslint-disable react-refresh/only-export-components */
 import React, {
   createContext,
   useCallback,

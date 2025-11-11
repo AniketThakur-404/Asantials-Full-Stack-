@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -5,6 +6,8 @@
 
 :root {
   color-scheme: light;
+  --font-header: "Satoshi", "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-body: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --marquee-bar-h: 26px;
   --marquee-duration: 14s;
   --marquee-fade: 18px;
@@ -45,7 +48,16 @@
 
 /* Base */
 body {
+  font-family: var(--font-body);
   @apply bg-neutral-50 text-neutral-900 antialiased;
+}
+
+.font-header {
+  font-family: var(--font-header);
+}
+
+.font-body {
+  font-family: var(--font-body);
 }
 
 /* ===========================
@@ -128,9 +140,6 @@ body {
    =========================== */
 
 .shipping-marquee {
-  margin-inline: auto;
-  max-width: 80rem;
-  padding-inline: 1.5rem;
   overflow: hidden;
   background: #000; /* Keep this bar black too */
 }

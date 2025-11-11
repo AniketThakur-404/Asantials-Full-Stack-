@@ -1,11 +1,12 @@
 // src/pages/AllProductsPage.jsx
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { Star } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
-import { categories, products, toProductCard } from '../data/products';
+import { useCatalog } from '../contexts/catalog-context';
+import { toProductCard } from '../lib/shopify';
 
-const navItems = [{ value: 'all', label: 'View All' }, ...categories];
+const defaultNavItems = [{ value: 'all', label: 'View All' }];
 
 const toneReviews = [
   {
@@ -56,13 +57,68 @@ const useActiveCategory = () => {
 const AllProductsPage = () => {
   const { active, updateCategory } = useActiveCategory();
   const location = useLocation();
+  const {
+    products: catalogProducts,
+    collections,
+    loading: catalogLoading,
+    ensureCollectionProducts,
+  } = useCatalog();
+  const [collectionProducts, setCollectionProducts] = useState({});
+  const [collectionLoading, setCollectionLoading] = useState(false);
+
+  const navItems = useMemo(() => {
+    const items = [...defaultNavItems];
+    (collections ?? [])
+      .filter((collection) => collection?.handle && collection?.title)
+      .forEach((collection) => {
+        if (!items.some((item) => item.value === collection.handle)) {
+          items.push({ value: collection.handle, label: collection.title });
+        }
+      });
+    return items;
+  }, [collections]);
+
+  const hasCollectionProducts = collectionProducts[active];
+
+  useEffect(() => {
+    if (active === 'all' || hasCollectionProducts) return;
+    let cancelled = false;
+    setCollectionLoading(true);
+
+    ensureCollectionProducts(active, { limit: 60 })
+      .then((productsForCollection) => {
+        if (cancelled || !productsForCollection) return;
+        setCollectionProducts((prev) => ({
+          ...prev,
+          [active]: productsForCollection,
+        }));
+      })
+      .catch((error) => {
+        console.error(`Failed to load collection "${active}"`, error);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setCollectionLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [active, hasCollectionProducts, ensureCollectionProducts]);
 
   const filteredProducts = useMemo(() => {
-    if (active === 'all') return products;
-    return products.filter((product) => product.category === active);
-  }, [active]);
+    if (active === 'all') return catalogProducts ?? [];
+    return collectionProducts[active] ?? [];
+  }, [active, catalogProducts, collectionProducts]);
 
   const totalCount = filteredProducts.length;
+  const isLoading =
+    catalogLoading || (active !== 'all' && !collectionProducts[active] && collectionLoading);
+  const productCards = useMemo(
+    () => filteredProducts.map(toProductCard).filter(Boolean),
+    [filteredProducts],
+  );
 
   return (
     <section className="mx-auto w-full max-w-[1400px] px-4 py-16 sm:px-6 lg:px-10">
@@ -121,10 +177,22 @@ const AllProductsPage = () => {
         </div>
       </header>
 
-      <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {filteredProducts.map((product) => (
-          <ProductCard key={product.slug} item={toProductCard(product)} />
-        ))}
+      <div className="mt-10 min-h-[200px]">
+        {isLoading ? (
+          <p className="text-sm uppercase tracking-[0.3em] text-neutral-500">
+            Loading products…
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {productCards.length > 0 ? (
+              productCards.map((item) => <ProductCard key={item.href} item={item} />)
+            ) : (
+              <p className="col-span-full text-sm uppercase tracking-[0.3em] text-neutral-500">
+                No products available in this selection.
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       <footer className="mt-16 rounded-3xl border border-neutral-200 p-6 text-center text-xs uppercase tracking-[0.3em] text-neutral-500">

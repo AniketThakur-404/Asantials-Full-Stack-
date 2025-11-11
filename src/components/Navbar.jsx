@@ -24,88 +24,86 @@ const Navbar = ({ onSearchClick = () => {}, onCartClick = () => {} }) => {
 
   return (
     <header
-      className={`border-t-2 border-black border-b border-neutral-200 ${
+      className={`font-header border-t-2 border-black border-b border-neutral-200 ${
         scrolled ? 'bg-neutral-100' : 'bg-neutral-100'
       }`}
     >
-      {/* relative wrapper so we can absolutely center the middle nav */}
-      <div className="relative mx-auto h-14 w-full max-w-[1280px] px-6">
-        {/* Left: Nav */}
-        <nav className="absolute left-6 top-1/2 hidden -translate-y-1/2 items-center gap-14 md:flex">
-          <NavLink
-            to="/products"
-            className={() =>
-              `${navItem} ${
-                isProductsPath && !activeCategory
+      <div className="mx-auto h-14 w-full max-w-[1600px] px-4 sm:px-6 md:px-8 lg:px-2">
+        <div className="grid h-full grid-cols-[1fr_auto_1fr] items-center">
+          {/* Left: Nav */}
+          <nav className="hidden items-center gap-16 justify-self-start md:flex md:justify-start">
+            <Link
+              to="/products?category=t-shirts"
+              className={`${navItem} ${
+                isProductsPath && activeCategory === 't-shirts'
                   ? 'text-neutral-900 font-semibold'
                   : 'text-neutral-600 hover:text-neutral-900'
-              }`
-            }
-            end
-          >
-            ALL PRODUCTS
-          </NavLink>
-          <Link
-            to="/products?category=t-shirts"
-            className={`${navItem} ${
-              isProductsPath && activeCategory === 't-shirts'
-                ? 'text-neutral-900 font-semibold'
-                : 'text-neutral-600 hover:text-neutral-900'
-            }`}
-          >
-            T-SHIRTS
-          </Link>
-          <Link
-            to="/products?category=hoodies"
-            className={`${navItem} ${
-              isProductsPath && activeCategory === 'hoodies'
-                ? 'text-neutral-900 font-semibold'
-                : 'text-neutral-600 hover:text-neutral-900'
-            }`}
-          >
-            HOODIES
-          </Link>
-        </nav>
+              }`}
+            >
+              T-SHIRTS
+            </Link>
+            <Link
+              to="/products?category=hoodies"
+              className={`${navItem} ${
+                isProductsPath && activeCategory === 'hoodies'
+                  ? 'text-neutral-900 font-semibold'
+                  : 'text-neutral-600 hover:text-neutral-900'
+              }`}
+            >
+              HOODIES
+            </Link>
+            <Link
+              to="/products?category=shoes"
+              className={`${navItem} ${
+                isProductsPath && activeCategory === 'shoes'
+                  ? 'text-neutral-900 font-semibold'
+                  : 'text-neutral-600 hover:text-neutral-900'
+              }`}
+            >
+              SHOES
+            </Link>
+          </nav>
 
-        {/* Center: Logo */}
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-          <Link
-            to="/"
-            className="font-extrabold tracking-[0.55em] text-[13px] leading-none text-neutral-900"
-          >
-            ASANTIALS
-          </Link>
-        </div>
+          {/* Center: Logo */}
+          <div className="flex justify-center">
+            <Link
+              to="/"
+              className="font-extrabold tracking-[0.55em] text-[13px] leading-none text-neutral-900"
+            >
+              ASANTIALS
+            </Link>
+          </div>
 
-        {/* Right: Actions */}
-        <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-10">
-          <button
-            type="button"
-            onClick={onSearchClick}
-            className="hidden sm:block uppercase tracking-[0.25em] text-[11px] text-neutral-700 hover:text-neutral-900"
-          >
-            SEARCH
-          </button>
-          <Link
-            to="/login"
-            className="hidden sm:block uppercase tracking-[0.25em] text-[11px] text-neutral-700 hover:text-neutral-900"
-          >
-            LOGIN
-          </Link>
-          <button
-            type="button"
-            onClick={onCartClick}
-            aria-label="Cart"
-            className="relative flex items-center gap-2 uppercase tracking-[0.25em] text-[11px] text-neutral-700 transition hover:text-neutral-900"
-          >
-            <ShoppingCart className="h-4 w-4" strokeWidth={1.5} />
-            {totalItems > 0 && (
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-900 text-[10px] font-semibold text-white">
-                {totalItems}
-              </span>
-            )}
-            <span className="hidden sm:inline">CART</span>
-          </button>
+          {/* Right: Actions */}
+          <div className="flex items-center justify-end gap-16">
+            <button
+              type="button"
+              onClick={onSearchClick}
+              className="hidden sm:block uppercase tracking-[0.25em] text-[11px] text-neutral-700 hover:text-neutral-900"
+            >
+              SEARCH
+            </button>
+            <Link
+              to="/login"
+              className="hidden sm:block uppercase tracking-[0.25em] text-[11px] text-neutral-700 hover:text-neutral-900"
+            >
+              LOGIN
+            </Link>
+            <button
+              type="button"
+              onClick={onCartClick}
+              aria-label="Cart"
+              className="relative flex items-center gap-2 uppercase tracking-[0.25em] text-[11px] text-neutral-700 transition hover:text-neutral-900"
+            >
+              <ShoppingCart className="h-4 w-4" strokeWidth={1.5} />
+              {totalItems > 0 && (
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-900 text-[10px] font-semibold text-white">
+                  {totalItems}
+                </span>
+              )}
+              <span className="hidden sm:inline">CART</span>
+            </button>
+          </div>
         </div>
       </div>
     </header>

@@ -1,5 +1,5 @@
 // src/components/Footer.jsx
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 
 const shippingMessages = [
@@ -10,24 +10,106 @@ const shippingMessages = [
   "Exclusive Online Drops",
 ];
 
+const BrandStory = () => {
+  const [expanded, setExpanded] = useState(false);
+
+  const detailSections = [
+    {
+      heading: "The Story",
+      paragraphs: [
+        "EVRYDAE was born from that frustration - and a mission to rebuild the everyday wardrobe from the fabric up.",
+        "We discovered the answer in bamboo cotton - nature's most underrated luxury fiber. Softer than conventional cotton, naturally breathable, and thermoregulating, it moves with you, not against you. Every thread feels calm, cool, and clean - made to be worn every damn day.",
+      ],
+    },
+    {
+      heading: "Why Bamboo?",
+      paragraphs: [
+        "Because quality shouldn't be seasonal.",
+        "Bamboo fabric lasts longer, feels smoother, and leaves a lighter footprint on the planet.",
+        "It's sustainable luxury - not a gimmick, but a mindset.",
+        "Our tees aren't built to shout. They're built to stay. To become your everyday armor - minimal, elevated, essential.",
+      ],
+    },
+    {
+      heading: "The Vision",
+      paragraphs: [
+        "EVRYDAE stands for balance - between comfort and style, function and emotion, street and sophistication.",
+        "We're redefining what \"basics\" mean in India: not cheap, not common - but crafted, considered, and timeless.",
+        "EVRYDAE | Made for those who demand more - even from the simplest things.",
+      ],
+    },
+  ];
+
+  return (
+    <section className="border-t border-neutral-200 bg-neutral-100 text-neutral-900">
+      <div className="mx-auto w-full max-w-[1600px] px-4 py-12 sm:px-6 md:px-8 lg:px-2">
+        <p className="text-[11px] uppercase tracking-[0.35em] text-neutral-500">
+          VRYDAE | Elevated Essentials
+        </p>
+        <div className="mt-4 space-y-4 text-sm leading-relaxed text-neutral-700">
+          <p>India's fashion scene has evolved fast - but something essential was missing.</p>
+          <p>
+            Between fast fashion and luxury hype, quality basics were forgotten. The market overflowed with
+            cotton tees that looked premium on launch day but lost their soul after two washes.
+          </p>
+        </div>
+        {!expanded && (
+          <button
+            type="button"
+            onClick={() => setExpanded(true)}
+            className="mt-6 text-[11px] uppercase tracking-[0.3em] text-neutral-700 underline decoration-neutral-400 underline-offset-4 transition hover:text-neutral-900"
+          >
+            Read More...
+          </button>
+        )}
+        {expanded && (
+          <div className="mt-8 space-y-8 text-sm leading-relaxed text-neutral-700">
+            {detailSections.map((section) => (
+              <article key={section.heading}>
+                <p className="font-header text-xs uppercase tracking-[0.35em] text-neutral-500">
+                  {section.heading}
+                </p>
+                <div className="mt-3 space-y-3">
+                  {section.paragraphs.map((paragraph, index) => (
+                    <p key={`${section.heading}-${index}`}>{paragraph}</p>
+                  ))}
+                </div>
+              </article>
+            ))}
+            <button
+              type="button"
+              onClick={() => setExpanded(false)}
+              className="text-[11px] uppercase tracking-[0.3em] text-neutral-700 underline decoration-neutral-400 underline-offset-4 transition hover:text-neutral-900"
+            >
+              Read Less
+            </button>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+};
+
 const ShippingStripe = () => (
   <div className="w-full bg-neutral-900 text-white">
-    <div className="shipping-marquee">
-      <div className="shipping-marquee__track">
-        {shippingMessages.map((message) => (
-          <span key={message} className="shipping-marquee__item">
-            {message}
-          </span>
-        ))}
-        {shippingMessages.map((message) => (
-          <span
-            key={`${message}-duplicate`}
-            className="shipping-marquee__item"
-            aria-hidden="true"
-          >
-            {message}
-          </span>
-        ))}
+    <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 md:px-8 lg:px-2">
+      <div className="shipping-marquee">
+        <div className="shipping-marquee__track">
+          {shippingMessages.map((message) => (
+            <span key={message} className="shipping-marquee__item">
+              {message}
+            </span>
+          ))}
+          {shippingMessages.map((message) => (
+            <span
+              key={`${message}-duplicate`}
+              className="shipping-marquee__item"
+              aria-hidden="true"
+            >
+              {message}
+            </span>
+          ))}
+        </div>
       </div>
     </div>
   </div>
@@ -161,6 +243,7 @@ const SiteFooter = () => (
 
 const Footer = () => (
   <>
+    <BrandStory />
     <ShippingStripe />
     <SiteFooter />
   </>

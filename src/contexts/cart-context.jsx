@@ -1,4 +1,5 @@
 // src/contexts/cart-context.jsx
+/* eslint-disable react-refresh/only-export-components */
 import React, {
   createContext,
   useCallback,
@@ -56,6 +57,10 @@ const cartReducer = (state, action) => {
     case 'remove': {
       const { id } = action.payload;
       return state.filter((entry) => entry.id !== id);
+    }
+    case 'removeBySlug': {
+      const { slug } = action.payload;
+      return state.filter((entry) => entry.slug !== slug);
     }
     case 'clear': {
       return [];
@@ -129,6 +134,10 @@ const CartProvider = ({ children }) => {
 
   const removeItem = useCallback((slug, size) => {
     if (!slug) return;
+    if (typeof size === 'undefined') {
+      dispatch({ type: 'removeBySlug', payload: { slug } });
+      return;
+    }
     const id = createId(slug, size);
     dispatch({ type: 'remove', payload: { id } });
   }, []);

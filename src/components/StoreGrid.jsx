@@ -1,7 +1,31 @@
 // src/components/StoreGrid.jsx
 import React from 'react';
-import { storeLocations } from '../data/appData';
 import StoreCard from './StoreCard';
+
+const image = (file) => `${import.meta.env?.BASE_URL ?? '/'}images/${file}`;
+
+const storeLocations = [
+  {
+    city: 'Hyderabad',
+    address: '101, Vimori Boulevard, Street No. 4, Green Valley, Banjara Hills',
+    img: image('m1.jpg'),
+  },
+  {
+    city: 'Delhi',
+    address: 'M-81, Ground Floor, M Block Market, Greater Kailash II',
+    img: image('m3.jpg'),
+  },
+  {
+    city: 'Mumbai',
+    address: 'B1, Prem Sagar Building, 4th Rd, Khar West',
+    img: image('m4.jpg'),
+  },
+  {
+    city: 'Bengaluru',
+    address: '29, Indigo Block, First Main, Indiranagar',
+    img: image('m5.jpg'),
+  },
+];
 
 export default function StoreGrid() {
   return (
