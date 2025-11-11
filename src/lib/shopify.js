@@ -1,4 +1,3 @@
-// src/lib/shopify.js
 const domain = import.meta.env.VITE_SHOPIFY_DOMAIN;
 const token = import.meta.env.VITE_SHOPIFY_STOREFRONT_TOKEN;
 const apiVersion = import.meta.env.VITE_SHOPIFY_API_VERSION || "2024-07";
@@ -273,8 +272,6 @@ export function findVariantForSize(product, size) {
 
 export const getProductImageUrl = (product) =>
   product?.featuredImage?.url ?? product?.images?.[0]?.url ?? '';
-
-/* ================= NAVIGATION ================= */
 
 /* ================= NAVIGATION ================= */
 
@@ -619,13 +616,22 @@ export async function fetchProductByHandle(handle) {
         { namespace: "global",  key: "sub-heading" },
         { namespace: "global",  key: "tagline" },
 
-        { namespace: "custom", key: "materials" },
-        { namespace: "custom", key: "material" },
-        { namespace: "custom", key: "sole" },
-        { namespace: "custom", key: "lining" },
-        { namespace: "custom", key: "colour" },
-        { namespace: "custom", key: "color" },
-        { namespace: "custom", key: "type_of_shoe" },
+        { namespace: "theme",   key: "subheading" },
+        { namespace: "theme",   key: "subtitle" },
+        { namespace: "theme",   key: "sub_title" },
+        { namespace: "theme",   key: "sub-heading" },
+        { namespace: "theme",   key: "tagline" },
+
+        { namespace: "custom",  key: "materials" },
+        { namespace: "custom",  key: "material" },
+        { namespace: "custom",  key: "fabric_weight" },
+        { namespace: "custom",  key: "weight" },
+        { namespace: "custom",  key: "care" },
+        { namespace: "custom",  key: "wash_care" },
+        { namespace: "custom",  key: "shipping" },
+        { namespace: "custom",  key: "size_chart_json" },
+        { namespace: "custom",  key: "size_chart" },
+
         { namespace: "details", key: "materials" },
         { namespace: "details", key: "material" },
         { namespace: "details", key: "sole" },
