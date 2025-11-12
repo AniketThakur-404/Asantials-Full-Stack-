@@ -69,7 +69,7 @@ const ProductDetails = () => {
   const [pincode, setPincode] = useState('');
   const [sizeChartOpen, setSizeChartOpen] = useState(false);
 
-  // Always fetch fresh product (metafields included)
+  // Always fetch fresh product (with metafields)
   useEffect(() => {
     let cancelled = false;
 
@@ -127,7 +127,14 @@ const ProductDetails = () => {
     return () => { cancelled = true; };
   }, [slug, getProduct]);
 
-  const sizeOptions = useMemo(() => product?.optionValues?.size ?? [], [product]);
+  // Size options (from optionValues map or raw options)
+  const sizeOptions = useMemo(() => {
+    if (!product) return [];
+    const fromLookup = product.optionValues?.size ?? [];
+    if (fromLookup?.length) return fromLookup;
+    const opt = (product.options || []).find(o => (o?.name || '').toLowerCase() === 'size');
+    return opt?.values ?? [];
+  }, [product]);
   const hasSizes = sizeOptions.length > 0;
 
   useEffect(() => {
@@ -150,38 +157,48 @@ const ProductDetails = () => {
     setPincode('');
   }, [product, sizeOptions, location.state]);
 
-  /** Get a metafield value by key(s), case-insensitive; trims and drops empty strings */
-  const getMetafieldValue = (keys) => {
+  /** Return the full metafield (value + type + reference) by key(s) */
+  const getMetafield = (keys) => {
     if (!product?.metafields?.length) return null;
-    const keyList = Array.isArray(keys)
-      ? keys.map((key) => String(key).toLowerCase())
-      : [String(keys).toLowerCase()];
+    const keyList = (Array.isArray(keys) ? keys : [keys]).map(k => String(k).toLowerCase());
     const entry = product.metafields.find((field) =>
       keyList.includes((field?.key ?? '').toLowerCase())
     );
     if (!entry) return null;
-    const raw = entry.value;
-    if (raw == null) return null;
-    if (typeof raw === 'string') {
-      const t = raw.trim();
-      return t.length ? t : null;
+    if (typeof entry.value === 'string') {
+      const t = entry.value.trim();
+      entry.value = t.length ? t : null;
     }
-    return raw;
+    return entry;
   };
 
-  // Only from Shopify metafields (no hardcoded fallbacks)
+  const getMetafieldValue = (keys) => getMetafield(keys)?.value ?? null;
+
+  // PDP data from metafields only (no hardcoded fallbacks)
   const materialsInfo   = getMetafieldValue(['materials', 'material']);
   const weightInfo      = getMetafieldValue(['fabric_weight', 'weight']);
   const careInfo        = getMetafieldValue(['care', 'wash_care']);
   const shippingInfo    = getMetafieldValue(['shipping']);
-  const sizeChartSource = getMetafieldValue(['size_chart_json', 'size_chart']);
+  const sizeChartField  = getMetafield(['size_chart_json', 'size_chart']);
 
-  const sizeChartRows = useMemo(() => {
-    if (sizeChartSource) {
+  // Parse JSON/HTML/image/file for size chart
+  const {
+    sizeChartRows,
+    sizeChartHtml,
+    sizeChartImageUrl,
+    sizeChartFileUrl
+  } = useMemo(() => {
+    const out = { sizeChartRows: null, sizeChartHtml: null, sizeChartImageUrl: null, sizeChartFileUrl: null };
+    if (!sizeChartField) return out;
+
+    const val = sizeChartField.value;
+
+    // JSON array
+    if (typeof val === 'string' && val.trim().startsWith('[')) {
       try {
-        const parsed = JSON.parse(sizeChartSource);
+        const parsed = JSON.parse(val.trim());
         if (Array.isArray(parsed)) {
-          return parsed
+          out.sizeChartRows = parsed
             .map((entry) => ({
               size: entry.size ?? entry.label ?? entry.title ?? entry.name,
               chest: entry.chest ?? entry.bust ?? entry.width ?? entry['chest (in)'],
@@ -189,15 +206,53 @@ const ProductDetails = () => {
               length: entry.length ?? entry['length (in)'] ?? entry.height,
             }))
             .filter((row) => row.size);
+          return out;
         }
       } catch (e) {
-        console.warn('Unable to parse size chart metafield', e);
+        console.warn('Unable to parse size chart JSON', e);
       }
     }
-    return null;
-  }, [sizeChartSource]);
 
-  const hasSizeChart = Boolean(sizeChartRows?.length);
+    // HTML
+    if (typeof val === 'string' && /<[^>]+>/.test(val)) {
+      out.sizeChartHtml = val;
+      return out;
+    }
+
+    // Direct URL in value
+    if (typeof val === 'string' && /^https?:\/\//i.test(val)) {
+      const lower = val.toLowerCase();
+      if (/\.(png|jpe?g|webp|gif|svg)$/.test(lower)) out.sizeChartImageUrl = val;
+      else out.sizeChartFileUrl = val;
+      return out;
+    }
+
+    // File/image reference
+    const ref = sizeChartField.reference;
+    if (ref?.__typename === 'MediaImage') {
+      out.sizeChartImageUrl = ref.image?.url || null;
+      return out;
+    }
+    if (ref?.__typename === 'GenericFile') {
+      const url = ref.url || null;
+      if (url) {
+        const lower = url.toLowerCase();
+        if (/\.(png|jpe?g|webp|gif|svg)$/.test(lower)) out.sizeChartImageUrl = url;
+        else out.sizeChartFileUrl = url;
+      }
+      return out;
+    }
+
+    return out;
+  }, [sizeChartField]);
+
+  const hasSizeChart =
+    Boolean(sizeChartRows?.length) ||
+    Boolean(sizeChartHtml) ||
+    Boolean(sizeChartImageUrl) ||
+    Boolean(sizeChartFileUrl);
+
+  const canOpenSizeChart = Boolean(sizeChartField);
 
   if (loading) {
     return (
@@ -236,75 +291,101 @@ const ProductDetails = () => {
   const subheading = getSubheadingFromProduct(product);
   const descriptionHtml = product.descriptionHtml ?? `<p>${product.description ?? ''}</p>`;
   const featureTags = product.tags?.slice(0, 4) ?? [];
+  const detailLines = [
+    materialsInfo,
+    weightInfo,
+    ...featureTags.map((tag) => tag.replace(/[-_]/g, ' ')),
+    careInfo,
+  ].filter(Boolean);
+  const shippingLines = shippingInfo
+    ? shippingInfo
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+    : [];
+  const infoSections = [
+    {
+      key: 'description',
+      label: 'Description',
+      content: (
+        <div
+          className="space-y-4 text-[13px] uppercase leading-7 tracking-[0.12em] text-neutral-700 max-w-prose"
+          dangerouslySetInnerHTML={{ __html: descriptionHtml }}
+        />
+      ),
+    },
+    detailLines.length
+      ? {
+          key: 'details',
+          label: 'Details',
+          content: (
+            <ul className="space-y-2 text-[12px] uppercase tracking-[0.18em] text-neutral-700 max-w-prose">
+              {detailLines.map((line, index) => (
+                <li key={`${line}-${index}`}>{line}</li>
+              ))}
+            </ul>
+          ),
+        }
+      : null,
+    shippingLines.length
+      ? {
+          key: 'shipping',
+          label: 'Shipping',
+          content: (
+            <ul className="space-y-2 text-[12px] uppercase tracking-[0.18em] text-neutral-700 max-w-prose">
+              {shippingLines.map((line, index) => (
+                <li key={`${line}-${index}`}>{line}</li>
+              ))}
+            </ul>
+          ),
+        }
+      : null,
+  ].filter(Boolean);
 
   return (
     <article className="bg-neutral-50 text-neutral-900">
-      <div className="mx-auto w-full max-w-[1600px] px-4 py-12 sm:px-6 md:px-8 lg:px-2">
-        <div className="grid gap-y-12 lg:grid-cols-[320px_minmax(0,1fr)_360px] lg:gap-x-12">
+        <div className="site-shell section-gap">
+        <div className="grid gap-y-12 lg:grid-cols-[380px_minmax(0,1fr)_360px] lg:gap-x-12 xl:grid-cols-[420px_minmax(0,1fr)_360px]">
           {/* Left column: title + info */}
           <div className="space-y-8 lg:sticky lg:top-28 lg:self-start">
             <Breadcrumbs title={product.title} className="mb-6" />
-            <div className="space-y-2">
-              <h1 className="text-3xl font-semibold uppercase tracking-[0.25em] text-neutral-900">
-                {product.title}
-              </h1>
-              {subheading?.text && (
-                <p className="mt-2 text-sm uppercase tracking-[0.3em] text-neutral-500">
-                  {subheading.text}
-                </p>
-              )}
-              {subheading?.html && (
-                <div
-                  className="mt-2 text-sm uppercase tracking-[0.3em] text-neutral-500"
-                  dangerouslySetInnerHTML={{ __html: subheading.html }}
-                />
-              )}
-              <p className="mt-3 text-lg tracking-[0.18em] text-neutral-600">{priceLabel}</p>
-            </div>
-
-            <div className="space-y-6 text-sm leading-relaxed text-neutral-600">
-              <section className="space-y-3">
-                <h2 className="mb-2 text-[11px] uppercase tracking-[0.35em] text-neutral-500">
-                  Description
-                </h2>
-                <div
-                  className="prose prose-sm max-w-none text-neutral-600"
-                  dangerouslySetInnerHTML={{ __html: descriptionHtml }}
-                />
-              </section>
-
-              {(materialsInfo || featureTags.length > 0) && (
-                <section className="space-y-3 border-t border-neutral-200 pt-4">
-                  <h2 className="mb-2 text-[11px] uppercase tracking-[0.35em] text-neutral-500">
-                    Details
-                  </h2>
-                  {materialsInfo && <p>{materialsInfo}</p>}
-                  {featureTags.length > 0 && (
-                    <ul className="mt-3 space-y-1 text-[10px] uppercase tracking-[0.3em] text-neutral-500">
-                      {featureTags.map((tag) => (
-                        <li key={tag}>#{tag}</li>
-                      ))}
-                    </ul>
+            <div className="space-y-4 border-b border-neutral-200 pb-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div className="space-y-2">
+                  <h1 className="text-3xl font-semibold uppercase tracking-[0.25em] text-neutral-900">
+                    {product.title}
+                  </h1>
+                  {subheading?.text && (
+                    <p className="text-sm uppercase tracking-[0.3em] text-neutral-500">
+                      {subheading.text}
+                    </p>
                   )}
-                </section>
-              )}
-
-              {(weightInfo || careInfo) && (
-                <section className="flex flex-wrap gap-6 border-t border-neutral-200 pt-4 text-xs uppercase tracking-[0.25em] text-neutral-700">
-                  {weightInfo && <span>{weightInfo}</span>}
-                  {careInfo && <span>{careInfo}</span>}
-                </section>
-              )}
-
-              {shippingInfo && (
-                <section className="space-y-3 border-t border-neutral-200 pt-4">
-                  <h2 className="mb-2 text-[11px] uppercase tracking-[0.35em] text-neutral-500">
-                    Shipping
-                  </h2>
-                  <p>{shippingInfo}</p>
-                </section>
-              )}
+                  {subheading?.html && (
+                    <div
+                      className="text-sm uppercase tracking-[0.3em] text-neutral-500"
+                      dangerouslySetInnerHTML={{ __html: subheading.html }}
+                    />
+                  )}
+                </div>
+                <p className="text-base tracking-[0.25em] text-neutral-700 sm:text-right">{priceLabel}</p>
+              </div>
             </div>
+
+            {infoSections.length > 0 && (
+              <div className="divide-y divide-neutral-200 border-b border-neutral-200">
+                {infoSections.map((section) => (
+                  <section
+                    key={section.key}
+                    className="grid grid-cols-1 gap-3 py-5 sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-6"
+                  >
+                    <p className="text-[11px] uppercase tracking-[0.35em] text-neutral-500">
+                      {section.label}
+                    </p>
+                    <div>{section.content}</div>
+                  </section>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Middle column: images */}
@@ -333,10 +414,10 @@ const ProductDetails = () => {
                     </h2>
                     <button
                       type="button"
-                      onClick={() => hasSizeChart && setSizeChartOpen(true)}
-                      disabled={!hasSizeChart}
+                      onClick={() => canOpenSizeChart && setSizeChartOpen(true)}
+                      disabled={!canOpenSizeChart}
                       className={`text-[10px] uppercase tracking-[0.3em] underline-offset-4 transition ${
-                        hasSizeChart
+                        canOpenSizeChart
                           ? 'text-neutral-900 hover:underline'
                           : 'cursor-not-allowed text-neutral-300'
                       }`}
@@ -421,8 +502,8 @@ const ProductDetails = () => {
       </div>
 
       {relatedProducts.length > 0 && (
-        <section className="mt-24">
-          <div className="border-t border-neutral-200 py-4">
+        <section className="mt-24 pb-4">
+          <div className="border-t border-neutral-200 py-6 px-2">
             <h2 className="text-[11px] uppercase tracking-[0.35em] text-neutral-600">
               You May Also Like
             </h2>
@@ -435,52 +516,89 @@ const ProductDetails = () => {
         </section>
       )}
 
-      {sizeChartOpen && hasSizeChart && (
+      {sizeChartOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-10">
           <div
             className="absolute inset-0 bg-black/60"
             onClick={() => setSizeChartOpen(false)}
           />
           <div className="relative z-10 w-full max-w-3xl border border-neutral-200 bg-white p-8">
-            <div className="flex items-center justify-between border-b border-neutral-200 pb-4">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.35em] text-neutral-500">Size Chart</p>
-                <p className="text-xs uppercase tracking-[0.3em] text-neutral-400">
-                  Measurements in inches
+            <div className="flex flex-col gap-4 border-b border-neutral-200 pb-4 text-center md:flex-row md:items-end md:justify-between md:text-left">
+              <div className="space-y-1">
+                <p className="text-[11px] uppercase tracking-[0.25em] text-neutral-500">Size Chart</p>
+                <p className="text-xs uppercase tracking-[0.18em] text-neutral-400">
+                  Measurements may vary slightly by style
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setSizeChartOpen(false)}
-                className="text-[11px] uppercase tracking-[0.35em] text-neutral-500 underline-offset-4 transition hover:text-neutral-900 hover:underline"
+                className="text-[10px] uppercase tracking-[0.2em] text-neutral-500 underline-offset-4 transition hover:text-neutral-900 hover:underline"
               >
                 Close
               </button>
             </div>
-            <div className="mt-6 overflow-x-auto">
-              <table className="w-full border-collapse text-sm text-neutral-700">
-                <thead className="text-[11px] uppercase tracking-[0.25em] text-neutral-500">
-                  <tr>
-                    <th className="border-b border-neutral-200 px-3 py-2 text-left">Size</th>
-                    <th className="border-b border-neutral-200 px-3 py-2 text-left">Chest</th>
-                    <th className="border-b border-neutral-200 px-3 py-2 text-left">Shoulder</th>
-                    <th className="border-b border-neutral-200 px-3 py-2 text-left">Length</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sizeChartRows.map((row) => (
-                    <tr key={row.size} className="text-neutral-700">
-                      <td className="border-b border-neutral-100 px-3 py-2 text-[11px] uppercase tracking-[0.3em]">
-                        {row.size}
-                      </td>
-                      <td className="border-b border-neutral-100 px-3 py-2">{row.chest ?? '-'}</td>
-                      <td className="border-b border-neutral-100 px-3 py-2">{row.shoulder ?? '-'}</td>
-                      <td className="border-b border-neutral-100 px-3 py-2">{row.length ?? '-'}</td>
+
+            {/* JSON table */}
+            {sizeChartRows?.length ? (
+              <div className="mt-6 overflow-x-auto">
+                <table className="w-full border-collapse text-sm text-neutral-700 text-center md:text-left">
+                  <thead className="text-[11px] uppercase tracking-[0.2em] text-neutral-500">
+                    <tr>
+                      <th className="border-b border-neutral-200 px-3 py-2 text-center md:text-left">Size</th>
+                      <th className="border-b border-neutral-200 px-3 py-2 text-center md:text-left">Chest</th>
+                      <th className="border-b border-neutral-200 px-3 py-2 text-center md:text-left">Shoulder</th>
+                      <th className="border-b border-neutral-200 px-3 py-2 text-center md:text-left">Length</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {sizeChartRows.map((row) => (
+                      <tr key={row.size} className="text-neutral-700">
+                        <td className="border-b border-neutral-100 px-3 py-2 text-[11px] uppercase tracking-[0.15em] text-center md:text-left">
+                          {row.size}
+                        </td>
+                        <td className="border-b border-neutral-100 px-3 py-2 text-center md:text-left">{row.chest ?? '-'}</td>
+                        <td className="border-b border-neutral-100 px-3 py-2 text-center md:text-left">{row.shoulder ?? '-'}</td>
+                        <td className="border-b border-neutral-100 px-3 py-2 text-center md:text-left">{row.length ?? '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+
+            {/* HTML */}
+            {!sizeChartRows?.length && sizeChartHtml ? (
+              <div
+                className="prose prose-sm mt-6 max-w-none text-neutral-700"
+                dangerouslySetInnerHTML={{ __html: sizeChartHtml }}
+              />
+            ) : null}
+
+            {/* Image */}
+            {!sizeChartRows?.length && !sizeChartHtml && sizeChartImageUrl ? (
+              <div className="mt-6">
+                <img
+                  src={sizeChartImageUrl}
+                  alt="Size chart"
+                  className="w-full border border-neutral-200 bg-neutral-100 object-contain"
+                />
+              </div>
+            ) : null}
+
+            {/* File link (e.g., PDF or non-image) */}
+            {!sizeChartRows?.length && !sizeChartHtml && !sizeChartImageUrl && sizeChartFileUrl ? (
+              <div className="mt-6">
+                <a href={sizeChartFileUrl} target="_blank" rel="noreferrer" className="underline">
+                  Open size chart
+                </a>
+              </div>
+            ) : null}
+
+            {/* Fallback if metafield exists but nothing parseable */}
+            {!sizeChartRows?.length && !sizeChartHtml && !sizeChartImageUrl && !sizeChartFileUrl && sizeChartField ? (
+              <p className="mt-6 text-sm text-neutral-600">Size chart is not available in a supported format.</p>
+            ) : null}
           </div>
         </div>
       )}
