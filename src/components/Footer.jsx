@@ -42,7 +42,7 @@ const BrandStory = () => {
 
   return (
     <section className="border-t border-neutral-200 bg-neutral-100 text-neutral-900">
-      <div className="mx-auto w-full max-w-[1600px] px-4 py-12 sm:px-6 md:px-8 lg:px-2">
+      <div className="site-shell section-gap">
         <p className="text-[11px] uppercase tracking-[0.35em] text-neutral-500">
           VRYDAE | Elevated Essentials
         </p>
@@ -92,7 +92,7 @@ const BrandStory = () => {
 
 const ShippingStripe = () => (
   <div className="w-full bg-neutral-900 text-white">
-    <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 md:px-8 lg:px-2">
+    <div className="site-shell py-3">
       <div className="shipping-marquee">
         <div className="shipping-marquee__track">
           {shippingMessages.map((message) => (
@@ -117,7 +117,7 @@ const ShippingStripe = () => (
 
 const SiteFooter = () => (
   <footer className="border-t border-neutral-200 bg-white">
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <div className="site-shell max-w-7xl lg:px-8">
       <div className="grid grid-cols-1 gap-10 py-12 md:grid-cols-3">
         {/* Column: Company */}
         <div className="text-sm text-neutral-700">
@@ -128,16 +128,6 @@ const SiteFooter = () => (
             <li>
               <Link to="/story" className="hover:underline">
                 Story
-              </Link>
-            </li>
-            <li>
-              <Link to="/stores" className="hover:underline">
-                Our Stores
-              </Link>
-            </li>
-            <li>
-              <Link to="/careers" className="hover:underline">
-                Careers
               </Link>
             </li>
             <li>
@@ -167,11 +157,6 @@ const SiteFooter = () => (
             <li>
               <Link to="/login" className="hover:underline">
                 Members Login
-              </Link>
-            </li>
-            <li>
-              <Link to="/returns" className="hover:underline">
-                Place an Exchange/Return Request
               </Link>
             </li>
             <li>

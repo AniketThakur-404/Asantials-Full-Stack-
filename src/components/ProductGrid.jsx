@@ -25,7 +25,7 @@ const cardVariants = {
 export default function ProductGrid({ title, products, ctaHref = "/products", ctaLabel = "Discover More" }) {
   return (
     // Keep desktop width capped so the four-up layout keeps similar card widths
-    <section className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 md:px-8 lg:px-2 py-9">
+    <section className="site-shell section-gap">
       <SectionHeader title={title} ctaHref={ctaHref} ctaLabel={ctaLabel} />
 
       {/* Four-up on large screens with consistent spacing */}

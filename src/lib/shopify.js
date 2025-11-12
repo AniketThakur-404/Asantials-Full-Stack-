@@ -574,10 +574,15 @@ export async function fetchProductByHandle(handle) {
       productType
       description
       descriptionHtml
+
       featuredImage { url altText }
       images(first: 10) { nodes { url altText } }
       collections(first: 5) { nodes { id handle title } }
+
       priceRange { minVariantPrice { amount currencyCode } }
+
+      options { name values }
+
       variants(first:20) {
         nodes {
           id
@@ -642,11 +647,16 @@ export async function fetchProductByHandle(handle) {
       ]) {
         key
         namespace
+        type
         value
+        reference {
+          __typename
+          ... on MediaImage { image { url altText } }
+          ... on GenericFile { url }
+        }
       }
 
       seo { description }
-
       tags
       vendor
     }

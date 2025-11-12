@@ -309,7 +309,7 @@ const ProductDetails = () => {
       label: 'Description',
       content: (
         <div
-          className="space-y-4 text-[13px] uppercase leading-7 tracking-[0.12em] text-neutral-700 max-w-prose"
+          className="space-y-3 text-[12px] uppercase leading-6 tracking-[0.25em] text-neutral-700"
           dangerouslySetInnerHTML={{ __html: descriptionHtml }}
         />
       ),
@@ -319,7 +319,7 @@ const ProductDetails = () => {
           key: 'details',
           label: 'Details',
           content: (
-            <ul className="space-y-2 text-[12px] uppercase tracking-[0.18em] text-neutral-700 max-w-prose">
+            <ul className="space-y-2 text-[12px] uppercase tracking-[0.25em] text-neutral-700">
               {detailLines.map((line, index) => (
                 <li key={`${line}-${index}`}>{line}</li>
               ))}
@@ -332,7 +332,7 @@ const ProductDetails = () => {
           key: 'shipping',
           label: 'Shipping',
           content: (
-            <ul className="space-y-2 text-[12px] uppercase tracking-[0.18em] text-neutral-700 max-w-prose">
+            <ul className="space-y-2 text-[12px] uppercase tracking-[0.25em] text-neutral-700">
               {shippingLines.map((line, index) => (
                 <li key={`${line}-${index}`}>{line}</li>
               ))}
@@ -345,47 +345,71 @@ const ProductDetails = () => {
   return (
     <article className="bg-neutral-50 text-neutral-900">
         <div className="site-shell section-gap">
-        <div className="grid gap-y-12 lg:grid-cols-[380px_minmax(0,1fr)_360px] lg:gap-x-12 xl:grid-cols-[420px_minmax(0,1fr)_360px]">
+        <div className="grid gap-y-12 lg:grid-cols-[320px_minmax(0,1fr)_360px] lg:gap-x-12">
           {/* Left column: title + info */}
           <div className="space-y-8 lg:sticky lg:top-28 lg:self-start">
             <Breadcrumbs title={product.title} className="mb-6" />
-            <div className="space-y-4 border-b border-neutral-200 pb-6">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <div className="space-y-2">
-                  <h1 className="text-3xl font-semibold uppercase tracking-[0.25em] text-neutral-900">
-                    {product.title}
-                  </h1>
-                  {subheading?.text && (
-                    <p className="text-sm uppercase tracking-[0.3em] text-neutral-500">
-                      {subheading.text}
-                    </p>
-                  )}
-                  {subheading?.html && (
-                    <div
-                      className="text-sm uppercase tracking-[0.3em] text-neutral-500"
-                      dangerouslySetInnerHTML={{ __html: subheading.html }}
-                    />
-                  )}
-                </div>
-                <p className="text-base tracking-[0.25em] text-neutral-700 sm:text-right">{priceLabel}</p>
-              </div>
+            <div className="space-y-2">
+              <h1 className="text-3xl font-semibold uppercase tracking-[0.25em] text-neutral-900">
+                {product.title}
+              </h1>
+              {subheading?.text && (
+                <p className="mt-2 text-sm uppercase tracking-[0.3em] text-neutral-500">
+                  {subheading.text}
+                </p>
+              )}
+              {subheading?.html && (
+                <div
+                  className="mt-2 text-sm uppercase tracking-[0.3em] text-neutral-500"
+                  dangerouslySetInnerHTML={{ __html: subheading.html }}
+                />
+              )}
+              <p className="mt-3 text-lg tracking-[0.18em] text-neutral-600">{priceLabel}</p>
             </div>
 
-            {infoSections.length > 0 && (
-              <div className="divide-y divide-neutral-200 border-b border-neutral-200">
-                {infoSections.map((section) => (
-                  <section
-                    key={section.key}
-                    className="grid grid-cols-1 gap-3 py-5 sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-6"
-                  >
-                    <p className="text-[11px] uppercase tracking-[0.35em] text-neutral-500">
-                      {section.label}
-                    </p>
-                    <div>{section.content}</div>
-                  </section>
-                ))}
-              </div>
-            )}
+            <div className="space-y-6 text-sm leading-relaxed text-neutral-600">
+              <section className="space-y-3">
+                <h2 className="mb-2 text-[11px] uppercase tracking-[0.35em] text-neutral-500">
+                  Description
+                </h2>
+                <div
+                  className="prose prose-sm max-w-none text-neutral-600"
+                  dangerouslySetInnerHTML={{ __html: descriptionHtml }}
+                />
+              </section>
+
+              {(materialsInfo || featureTags.length > 0) && (
+                <section className="space-y-3 border-t border-neutral-200 pt-4">
+                  <h2 className="mb-2 text-[11px] uppercase tracking-[0.35em] text-neutral-500">
+                    Details
+                  </h2>
+                  {materialsInfo && <p>{materialsInfo}</p>}
+                  {featureTags.length > 0 && (
+                    <ul className="mt-3 space-y-1 text-[10px] uppercase tracking-[0.3em] text-neutral-500">
+                      {featureTags.map((tag) => (
+                        <li key={tag}>#{tag}</li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              )}
+
+              {(weightInfo || careInfo) && (
+                <section className="flex flex-wrap gap-6  border-neutral-200 pt- text-xs uppercase tracking-[0.25em] text-neutral-700">
+                  {weightInfo && <span>{weightInfo}</span>}
+                  {careInfo && <span>{careInfo}</span>}
+                </section>
+              )}
+
+              {shippingInfo && (
+                <section className="space-y-3 border-t border-neutral-200 pt-4">
+                  <h2 className="mb-2 text-[11px] uppercase tracking-[0.35em] text-neutral-500">
+                    Shipping
+                  </h2>
+                  <p>{shippingInfo}</p>
+                </section>
+              )}
+            </div>
           </div>
 
           {/* Middle column: images */}

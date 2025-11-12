@@ -121,7 +121,7 @@ const AllProductsPage = () => {
   );
 
   return (
-    <section className="mx-auto w-full max-w-[1400px] px-4 py-16 sm:px-6 lg:px-10">
+    <section className="site-shell section-gap max-w-[1400px] lg:px-10">
       <header className="space-y-8 border-b border-neutral-200 pb-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <h1 className="text-xs uppercase tracking-[0.35em] text-neutral-600">All Products</h1>

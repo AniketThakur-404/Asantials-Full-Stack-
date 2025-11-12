@@ -29,7 +29,7 @@ const storeLocations = [
 
 export default function StoreGrid() {
   return (
-    <section className="mx-auto max-w-[1600px] px-4 py-12 sm:px-6 md:px-8 lg:px-10">
+    <section className="site-shell section-gap lg:px-10">
       <div className="border-t border-neutral-200 py-4">
         <h2 className="text-[11px] uppercase tracking-[0.35em] text-neutral-600">
           Asantials Stores
