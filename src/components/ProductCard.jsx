@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 
 export default function ProductCard({ item }) {
-  const { img, title, price, badge, href } = item;
+  const { img, hoverImg, title, price, badge, href } = item;
 
   const card = (
     <article className="group flex h-full flex-col transition hover:-translate-y-1">
@@ -10,9 +10,19 @@ export default function ProductCard({ item }) {
         <img
           src={img}
           alt={title}
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+          className={`h-full w-full object-cover transition duration-500 group-hover:scale-[1.03] ${
+            hoverImg ? 'group-hover:opacity-0' : ''
+          }`}
           loading="lazy"
         />
+        {hoverImg && (
+          <img
+            src={hoverImg}
+            alt={`${title} alternate view`}
+            className="absolute inset-0 h-full w-full object-cover opacity-0 transition duration-500 group-hover:scale-[1.03] group-hover:opacity-100"
+            loading="lazy"
+          />
+        )}
         {badge && (
           <span className="absolute left-3 top-3 rounded-full bg-neutral-900 px-3 py-1 text-[10px] tracking-[0.25em] text-white uppercase">
             {badge}

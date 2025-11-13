@@ -211,11 +211,14 @@ export function toProductCard(product) {
   if (!product) return null;
   const image =
     product.featuredImage?.url ?? product.images?.[0]?.url ?? undefined;
+  const secondaryImage =
+    product.images?.find((img) => img?.url && img.url !== image)?.url ?? null;
   const currency = product.currencyCode || defaultCurrencyCode;
   return {
     title: product.title,
     price: formatMoney(product.price, currency),
     img: image,
+    hoverImg: secondaryImage,
     badge: product.tags?.includes("new") ? "New" : undefined,
     href: `/product/${product.handle}`,
   };
