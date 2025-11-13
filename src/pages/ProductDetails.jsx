@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
+import ProgressButton from '../components/ProgressButton';
 import { useCart } from '../contexts/cart-context';
 import { useNotifications } from '../components/NotificationProvider';
 import { useCatalog } from '../contexts/catalog-context';
@@ -480,13 +481,7 @@ const ProductDetails = () => {
               </div>
 
               <div className="space-y-3">
-                <button
-                  type="button"
-                  onClick={handleAddToCart}
-                  className="w-full border border-neutral-900 bg-neutral-900 py-4 text-[11px] uppercase tracking-[0.35em] text-white transition-transform duration-200 hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2 active:scale-95"
-                >
-                  Add to Cart
-                </button>
+                <ProgressButton label="Add to Cart" onClick={handleAddToCart} />
                 <button
                   type="button"
                   onClick={handleBuyNow}
