@@ -6,7 +6,15 @@ import ProductCard from '../components/ProductCard';
 import { useCatalog } from '../contexts/catalog-context';
 import { toProductCard } from '../lib/shopify';
 
-const defaultNavItems = [{ value: 'all', label: 'View All' }];
+const shoeNavItems = [
+  { value: 'shoes', label: 'Shoes' },
+  { value: 'loafers', label: 'Loafers' },
+  { value: 'boots', label: 'Boots' },
+  { value: 'sneakers', label: 'Sneakers' },
+  { value: 'sandals', label: 'Sandals' },
+];
+
+const defaultNavItems = [{ value: 'all', label: 'View All' }, ...shoeNavItems];
 
 const toneReviews = [
   {
@@ -39,23 +47,25 @@ const toneReviews = [
   },
 ];
 
-const useActiveCategory = () => {
+const useActiveCategory = (initialCategory = 'all') => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const active = searchParams.get('category') ?? 'all';
+  const active = searchParams.get('category') ?? initialCategory;
 
   const updateCategory = (value) => {
-    if (value === 'all') {
-      setSearchParams({});
-      return;
+    const next = new URLSearchParams(searchParams);
+    if (!value || value === initialCategory) {
+      next.delete('category');
+    } else {
+      next.set('category', value);
     }
-    setSearchParams({ category: value });
+    setSearchParams(next);
   };
 
   return { active, updateCategory };
 };
 
-const AllProductsPage = () => {
-  const { active, updateCategory } = useActiveCategory();
+const AllProductsPage = ({ initialCategory = 'all' } = {}) => {
+  const { active, updateCategory } = useActiveCategory(initialCategory);
   const location = useLocation();
   const {
     products: catalogProducts,

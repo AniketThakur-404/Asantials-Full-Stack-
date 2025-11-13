@@ -17,6 +17,11 @@ export default function App() {
         <Route path="/" element={<Layout />}>
           <Route index element={<HomePage />} />
           <Route path="products" element={<AllProductsPage />} />
+          <Route path="shoes" element={<AllProductsPage initialCategory="shoes" />} />
+          <Route path="shoes/loafers" element={<AllProductsPage initialCategory="loafers" />} />
+          <Route path="shoes/boots" element={<AllProductsPage initialCategory="boots" />} />
+          <Route path="shoes/sneakers" element={<AllProductsPage initialCategory="sneakers" />} />
+          <Route path="shoes/sandals" element={<AllProductsPage initialCategory="sandals" />} />
           <Route path="apparel" element={<Navigate to="/products?category=t-shirts" replace />} />
           <Route path="product/:slug" element={<ProductDetails />} />
           <Route path="cart" element={<CartPage />} />

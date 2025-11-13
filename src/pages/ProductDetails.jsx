@@ -369,7 +369,7 @@ const ProductDetails = () => {
 
             <div className="space-y-6 text-sm leading-relaxed text-neutral-600">
               <section className="space-y-3">
-                <h2 className="mb-2 text-[11px] uppercase tracking-[0.35em] text-neutral-500">
+                <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.35em] text-neutral-500">
                   Description
                 </h2>
                 <div
@@ -380,7 +380,7 @@ const ProductDetails = () => {
 
               {(materialsInfo || featureTags.length > 0) && (
                 <section className="space-y-3 border-t border-neutral-200 pt-4">
-                  <h2 className="mb-2 text-[11px] uppercase tracking-[0.35em] text-neutral-500">
+                  <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.35em] text-neutral-500">
                     Details
                   </h2>
                   {materialsInfo && <p>{materialsInfo}</p>}
@@ -403,7 +403,7 @@ const ProductDetails = () => {
 
               {shippingInfo && (
                 <section className="space-y-3 border-t border-neutral-200 pt-4">
-                  <h2 className="mb-2 text-[11px] uppercase tracking-[0.35em] text-neutral-500">
+                  <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.35em] text-neutral-500">
                     Shipping
                   </h2>
                   <p>{shippingInfo}</p>

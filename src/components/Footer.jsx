@@ -43,8 +43,8 @@ const BrandStory = () => {
   return (
     <section className="border-t border-neutral-200 bg-neutral-100 text-neutral-900">
       <div className="site-shell section-gap">
-        <p className="text-[11px] uppercase tracking-[0.35em] text-neutral-500">
-          VRYDAE | Elevated Essentials
+        <p className="text-[11px] uppercase tracking-[0.35em] font-bold text-neutral-500">
+          EVRYDAE | Elevated Essentials
         </p>
         <div className="mt-4 space-y-4 text-sm leading-relaxed text-neutral-700">
           <p>India's fashion scene has evolved fast - but something essential was missing.</p>
@@ -66,7 +66,7 @@ const BrandStory = () => {
           <div className="mt-8 space-y-8 text-sm leading-relaxed text-neutral-700">
             {detailSections.map((section) => (
               <article key={section.heading}>
-                <p className="font-header text-xs uppercase tracking-[0.35em] text-neutral-500">
+                <p className="font-header text-xs uppercase font-bold tracking-[0.35em] text-neutral-500">
                   {section.heading}
                 </p>
                 <div className="mt-3 space-y-3">
