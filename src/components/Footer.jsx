@@ -91,7 +91,7 @@ const BrandStory = () => {
 };
 
 const ShippingStripe = () => (
-  <div className="w-full bg-neutral-900 text-white">
+  <div className="w-full bg-black text-white">
     <div className="site-shell py-3">
       <div className="shipping-marquee">
         <div className="shipping-marquee__track">
