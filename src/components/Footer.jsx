@@ -92,24 +92,18 @@ const BrandStory = () => {
 
 const ShippingStripe = () => (
   <div className="w-full bg-black text-white">
-    <div className="site-shell py-3">
-      <div className="shipping-marquee">
-        <div className="shipping-marquee__track">
-          {shippingMessages.map((message) => (
-            <span key={message} className="shipping-marquee__item">
-              {message}
-            </span>
-          ))}
-          {shippingMessages.map((message) => (
-            <span
-              key={`${message}-duplicate`}
-              className="shipping-marquee__item"
-              aria-hidden="true"
-            >
-              {message}
-            </span>
-          ))}
-        </div>
+    <div className="shipping-marquee py-3">
+      <div className="shipping-marquee__track">
+        {shippingMessages.map((message) => (
+          <span key={message} className="shipping-marquee__item">
+            {message}
+          </span>
+        ))}
+        {shippingMessages.map((message) => (
+          <span key={`${message}-duplicate`} className="shipping-marquee__item" aria-hidden="true">
+            {message}
+          </span>
+        ))}
       </div>
     </div>
   </div>
