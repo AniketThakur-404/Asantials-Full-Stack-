@@ -23,7 +23,7 @@ const TopAnnouncement = () => (
     role="marquee"
     aria-label="Site announcements vertical marquee"
   >
-    <div className="marquee-vertical group h-full px-4 text-[10px] uppercase tracking-[0.35em] sm:px-6 lg:px-8">
+    <div className="marquee-vertical group h-full text-[10px] uppercase tracking-[0.35em]">
       <div className="marquee-vertical__group">
         {marqueeItems.map((item, idx) => (
           <span className="marquee-vertical__item" key={item || idx}>

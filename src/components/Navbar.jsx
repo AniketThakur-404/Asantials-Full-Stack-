@@ -78,7 +78,7 @@ const Navbar = ({ onSearchClick = () => {}, onCartClick = () => {} }) => {
   ];
 
   const navItem =
-    'relative flex items-center gap-1 px-2 pl-5 tracking-[0.25em] text-[11px] font-semibold transition-colors duration-200 before:absolute before:left-2 before:top-1/2 before:h-1.5 before:w-1.5 before:-translate-y-1/2 before:rounded-full before:bg-neutral-900 before:opacity-0 before:content-[""] before:transition-opacity before:duration-200';
+    'relative flex items-center gap-1 px-2 tracking-[0.25em] text-[11px] font-semibold transition-colors duration-200 before:absolute before:-left-1 before:top-1/2 before:h-1.5 before:w-1.5 before:-translate-y-1/2 before:rounded-full before:bg-neutral-900 before:opacity-0 before:content-[""] before:transition-opacity before:duration-200 after:absolute after:-bottom-1 after:left-0 after:h-[1px] after:w-full after:bg-neutral-900 after:opacity-0 after:content-[""] after:transition-transform after:duration-200 after:origin-left after:scale-x-0';
 
   const renderNavLink = (link) => {
     const childActive = link.children?.some((child) => child.value === activeCategory);
@@ -104,7 +104,7 @@ const Navbar = ({ onSearchClick = () => {}, onCartClick = () => {} }) => {
             className={`${navItem} ${
               isActive
                 ? 'font-semibold text-neutral-900 before:opacity-100'
-                : 'text-neutral-600 hover:text-neutral-900'
+                : 'text-neutral-600 hover:text-neutral-900 hover:after:opacity-60 hover:after:scale-x-100'
             }`}
             aria-haspopup="true"
             aria-expanded={isOpen}
@@ -126,11 +126,17 @@ const Navbar = ({ onSearchClick = () => {}, onCartClick = () => {} }) => {
               <Link
                 key={child.value}
                 to={child.href}
-                className={`block px-4 py-2 transition ${
+                className={`group flex flex-col px-4 py-2 transition ${
                   activeCategory === child.value ? 'text-neutral-900' : 'hover:text-neutral-900'
                 }`}
               >
-                {child.label}
+                <span>{child.label}</span>
+                <span
+                  className={`mt-1 h-[1px] w-full bg-neutral-900 transition-transform duration-200 ${
+                    activeCategory === child.value ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+                  }`}
+                  aria-hidden
+                />
               </Link>
             ))}
           </div>
@@ -145,7 +151,7 @@ const Navbar = ({ onSearchClick = () => {}, onCartClick = () => {} }) => {
         className={`${navItem} ${
           isActive
             ? 'font-semibold text-neutral-900 before:opacity-100'
-            : 'text-neutral-600 hover:text-neutral-900'
+            : 'text-neutral-600 hover:text-neutral-900 hover:after:opacity-60 hover:after:scale-x-100'
         }`}
       >
         {link.label}
@@ -160,12 +166,14 @@ const Navbar = ({ onSearchClick = () => {}, onCartClick = () => {} }) => {
       }`}
     >
       <div className="site-shell h-14 w-full">
-        <div className="grid h-full grid-cols-[auto_1fr_auto] items-center gap-4 md:grid-cols-[1fr_auto_1fr]">
+        <div className="grid h-full grid-cols-[auto_1fr_auto] items-center gap-4 lg:grid-cols-[1fr_auto_1fr]">
           {/* Left: Nav */}
-          <div className="flex items-center gap-3 justify-self-start md:gap-6">
+          <div className="flex items-center gap-3 justify-self-start lg:gap-6">
             <button
               type="button"
-              className="flex items-center gap-2 rounded-full border border-neutral-900 px-3 py-1 text-[10px] tracking-[0.32em] text-neutral-900 transition hover:bg-neutral-900 hover:text-white md:hidden"
+              className={`relative flex items-center gap-2 rounded-full border border-neutral-900 px-3 py-1 text-[10px] tracking-[0.32em] text-neutral-900 transition lg:hidden ${
+                mobileMenuOpen ? 'bg-neutral-900 text-white' : 'hover:bg-neutral-900 hover:text-white'
+              }`}
               aria-controls="primary-navigation"
               aria-expanded={mobileMenuOpen}
               onClick={() => setMobileMenuOpen((prev) => !prev)}
@@ -178,7 +186,7 @@ const Navbar = ({ onSearchClick = () => {}, onCartClick = () => {} }) => {
               Menu
             </button>
 
-            <nav className="hidden items-center gap-10 justify-self-start md:flex md:justify-start lg:gap-16">
+            <nav className="hidden items-center gap-8 justify-self-start lg:flex lg:justify-start xl:gap-16">
               {navLinks.map(renderNavLink)}
             </nav>
           </div>
@@ -194,7 +202,7 @@ const Navbar = ({ onSearchClick = () => {}, onCartClick = () => {} }) => {
           </div>
 
           {/* Right: Actions */}
-          <div className="flex items-center justify-end gap-16">
+          <div className="flex items-center justify-end gap-8 sm:gap-10 lg:gap-14 xl:gap-16">
             <button
               type="button"
               onClick={onSearchClick}
@@ -228,7 +236,7 @@ const Navbar = ({ onSearchClick = () => {}, onCartClick = () => {} }) => {
 
       <div
         id="primary-navigation"
-        className={`border-t border-neutral-200 transition-[grid-template-rows,opacity] duration-300 md:hidden ${
+        className={`border-t border-neutral-200 transition-[grid-template-rows,opacity] duration-300 lg:hidden ${
           mobileMenuOpen ? 'grid grid-rows-[1fr] opacity-100' : 'grid grid-rows-[0fr] opacity-0'
         }`}
       >

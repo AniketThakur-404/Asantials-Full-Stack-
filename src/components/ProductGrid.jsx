@@ -29,7 +29,7 @@ export default function ProductGrid({ title, products, ctaHref = "/products", ct
       <SectionHeader title={title} ctaHref={ctaHref} ctaLabel={ctaLabel} />
 
       {/* Four-up on large screens with consistent spacing */}
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-4 md:gap-5 lg:grid-cols-4 lg:gap-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-4 md:gap-5 lg:grid-cols-4 lg:gap-1">
         {products.map((item, idx) => (
           <Motion.div
             key={item.title + idx}

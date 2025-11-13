@@ -26,7 +26,7 @@ export default function HeroWith3D({ heroVideoSrc }) {
   return (
     <section
       ref={sectionRef}
-      className="relative flex w-full flex-col overflow-hidden bg-neutral-900 min-h-[480px] md:h-[88vh] md:min-h-[600px]"
+      className="relative flex w-full flex-col overflow-hidden bg-neutral-900 min-h-[580px] md:h-[88vh] md:min-h-[700px]"
     >
       <video
         className="absolute inset-0 z-10 h-full w-full object-cover"
@@ -55,11 +55,11 @@ export default function HeroWith3D({ heroVideoSrc }) {
 
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-30 h-10 bg-neutral-100 backdrop-blur md:h-14"
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-30 h-10 border-white/95  backdrop-blur md:h-14"
       />
 
       <div className="pointer-events-none absolute inset-0 z-40 flex items-end justify-center px-4 pb-8 sm:pb-12 md:pb-16">
-        <button className="pointer-events-auto mb-2 rounded-full border border-white/95 px-6 py-3 text-[10px] uppercase tracking-[0.35em] text-white/90 transition hover:bg-white hover:text-neutral-900 sm:px-8 sm:text-[11px]">
+        <button className="pointer-events-auto mb-6 rounded-full border border-white/95 px-6 py-3 text-[10px] uppercase tracking-[0.35em] text-white/90 transition hover:bg-white hover:text-neutral-900  sm:px-8 sm:text-[11px]">
           Shop All
         </button>
       </div>
