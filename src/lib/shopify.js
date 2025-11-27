@@ -88,10 +88,13 @@ export function formatMoney(
   }
 }
 
-const hiddenKeywords = ["shoe", "shoes", "sneaker", "footwear", "boot", "boots", "sandal"];
+const hiddenKeywords = (import.meta.env.VITE_SHOPIFY_HIDE_KEYWORDS || "")
+  .split(",")
+  .map((keyword) => keyword.trim().toLowerCase())
+  .filter(Boolean);
 
 const shouldHideProductNode = (node) => {
-  if (!node) return false;
+  if (!node || hiddenKeywords.length === 0) return false;
 
   const casefold = (value) => String(value ?? "").toLowerCase();
 
@@ -110,10 +113,12 @@ const shouldHideProductNode = (node) => {
 };
 
 const filterVisibleNodes = (nodes = []) =>
-  nodes.filter((node) => !shouldHideProductNode(node));
+  hiddenKeywords.length === 0
+    ? nodes
+    : nodes.filter((node) => !shouldHideProductNode(node));
 
 const shouldHideCollectionNode = (node) => {
-  if (!node) return false;
+  if (!node || hiddenKeywords.length === 0) return false;
   const casefold = (value) => String(value ?? "").toLowerCase();
   const handle = casefold(node.handle);
   const title = casefold(node.title);

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import { useCart } from '../contexts/cart-context';
@@ -68,6 +68,8 @@ const ProductDetails = () => {
   const [selectedSize, setSelectedSize] = useState(null);
   const [pincode, setPincode] = useState('');
   const [sizeChartOpen, setSizeChartOpen] = useState(false);
+  const [showStickyBar, setShowStickyBar] = useState(false);
+  const addToCartRef = useRef(null);
 
   // Always fetch fresh product (with metafields)
   useEffect(() => {
@@ -254,6 +256,22 @@ const ProductDetails = () => {
 
   const canOpenSizeChart = Boolean(sizeChartField);
 
+  useEffect(() => {
+    const target = addToCartRef.current;
+    if (!target) {
+      setShowStickyBar(false);
+      return undefined;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setShowStickyBar(!entry.isIntersecting);
+      },
+      { threshold: 0.6 },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [product]);
+
   if (loading) {
     return (
       <section className="mx-auto flex max-w-3xl flex-col items-center gap-6 px-4 py-24 text-center">
@@ -288,6 +306,8 @@ const ProductDetails = () => {
   };
 
   const priceLabel = formatMoney(product.price, product.currencyCode);
+  const heroImage = product?.featuredImage?.url ?? product?.images?.[0]?.url ?? '';
+
   const subheading = getSubheadingFromProduct(product);
   const descriptionHtml = product.descriptionHtml ?? `<p>${product.description ?? ''}</p>`;
   const featureTags = product.tags?.slice(0, 4) ?? [];
@@ -479,7 +499,7 @@ const ProductDetails = () => {
                 </label>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-3" ref={addToCartRef}>
                 <button
                   type="button"
                   onClick={handleAddToCart}
@@ -524,6 +544,31 @@ const ProductDetails = () => {
           </div>
         </div>
       </div>
+
+      {showStickyBar && product && (
+        <div className="fixed inset-x-0 bottom-4 z-40 flex justify-center px-4 sm:px-6">
+          <div className="flex w-full max-w-2xl items-center gap-3 rounded-full border border-neutral-200 bg-white/95 px-4 py-3 shadow-[0_25px_50px_-30px_rgba(0,0,0,0.55)]">
+            {heroImage ? (
+              <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-neutral-100">
+                <img src={heroImage} alt={product.title} className="h-full w-full object-cover" />
+              </div>
+            ) : null}
+            <div className="flex flex-1 flex-col truncate">
+              <p className="truncate text-[10px] uppercase tracking-[0.3em] text-neutral-900">
+                {product.title}
+              </p>
+              <p className="text-[10px] uppercase tracking-[0.25em] text-neutral-500">{priceLabel}</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              className="rounded-full bg-neutral-900 px-5 py-2 text-[10px] uppercase tracking-[0.35em] text-white transition hover:bg-neutral-700"
+            >
+              Add to Cart
+            </button>
+          </div>
+        </div>
+      )}
 
       {relatedProducts.length > 0 && (
         <section className="mt-24 pb-4">

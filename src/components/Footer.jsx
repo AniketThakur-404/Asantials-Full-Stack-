@@ -47,8 +47,10 @@ const BrandStory = () => {
           EVRYDAE | Elevated Essentials
         </p>
         <div className="mt-4 space-y-4 text-sm leading-relaxed text-neutral-700">
-          <p>India's fashion scene has evolved fast - but something essential was missing.</p>
-          <p>
+          <p className="paragraph-uppercase">
+            India's fashion scene has evolved fast - but something essential was missing.
+          </p>
+          <p className="paragraph-uppercase">
             Between fast fashion and luxury hype, quality basics were forgotten. The market overflowed with
             cotton tees that looked premium on launch day but lost their soul after two washes.
           </p>
@@ -69,9 +71,11 @@ const BrandStory = () => {
                 <p className="font-header text-xs uppercase font-bold tracking-[0.35em] text-neutral-500">
                   {section.heading}
                 </p>
-                <div className="mt-3 space-y-3">
+                <div className="mt-3 space-y-3 text-sm">
                   {section.paragraphs.map((paragraph, index) => (
-                    <p key={`${section.heading}-${index}`}>{paragraph}</p>
+                    <p key={`${section.heading}-${index}`} className="paragraph-uppercase">
+                      {paragraph}
+                    </p>
                   ))}
                 </div>
               </article>

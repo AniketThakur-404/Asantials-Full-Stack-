@@ -102,12 +102,25 @@ const SearchOverlay = ({ open, onClose }) => {
   }, [open, query, popularProducts]);
 
   const suggestionItems = useMemo(() => {
-    const titles = (catalogProducts ?? []).map((product) => product.title).filter(Boolean);
-    if (!query) return titles.slice(0, 6);
+    const keywords = [];
+    (catalogProducts ?? []).forEach((product) => {
+      if (product?.title) keywords.push(product.title);
+      if (product?.handle) keywords.push(product.handle.replace(/-/g, ' '));
+      if (Array.isArray(product?.tags)) {
+        product.tags.forEach((tag) => {
+          if (tag) keywords.push(tag.replace(/[-_]/g, ' '));
+        });
+      }
+    });
+    const uniqueKeywords = Array.from(
+      new Set(keywords.map((value) => value.trim()).filter(Boolean)),
+    );
+
+    if (!query) return uniqueKeywords.slice(0, 6);
+
     const normalized = query.toLowerCase();
-    const matches = titles.filter((title) => title.toLowerCase().includes(normalized));
-    const unique = Array.from(new Set([...matches, ...titles]));
-    return unique.slice(0, 6);
+    const matches = uniqueKeywords.filter((value) => value.toLowerCase().includes(normalized));
+    return Array.from(new Set([...matches, ...uniqueKeywords])).slice(0, 6);
   }, [catalogProducts, query]);
 
   const performSearch = (value) => {

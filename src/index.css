@@ -450,6 +450,15 @@ html {
   display: block;
 }
 
+.paragraph-uppercase {
+  font-family: var(--font-header);
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #272727;
+  line-height: 1.6;
+}
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
