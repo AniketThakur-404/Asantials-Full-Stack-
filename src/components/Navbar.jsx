@@ -1,8 +1,15 @@
 // src/components/Navbar.jsx
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronDown, Menu, ShoppingCart, X } from 'lucide-react';
+import { ChevronDown, Menu, Search, ShoppingCart, X } from 'lucide-react';
 import { useCart } from '../contexts/cart-context';
+
+const categoryAliases = {
+  hoodies: 'jeans',
+};
+
+const normalizeCategory = (value) =>
+  value ? categoryAliases[value] ?? value : value;
 
 const Navbar = ({ onSearchClick = () => {}, onCartClick = () => {} }) => {
   const [scrolled, setScrolled] = useState(false);
@@ -13,7 +20,7 @@ const Navbar = ({ onSearchClick = () => {}, onCartClick = () => {} }) => {
   const { totalItems } = useCart();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
-  const urlCategory = searchParams.get('category');
+  const urlCategory = normalizeCategory(searchParams.get('category'));
   const pathSegments = location.pathname.split('/').filter(Boolean);
   const pathCategory = pathSegments[0] === 'shoes' ? pathSegments[1] ?? 'shoes' : null;
   const activeCategory = urlCategory ?? pathCategory ?? null;
@@ -73,7 +80,7 @@ const Navbar = ({ onSearchClick = () => {}, onCartClick = () => {} }) => {
 
   const navLinks = [
     { href: '/products?category=t-shirts', value: 't-shirts', label: 'T-SHIRTS' },
-    { href: '/products?category=hoodies', value: 'hoodies', label: 'HOODIES' },
+    { href: '/products?category=jeans', value: 'jeans', label: 'JEANS' },
     { href: '/shoes', value: 'shoes', label: 'SHOES', children: shoeDropdownLinks },
   ];
 
@@ -165,8 +172,8 @@ const Navbar = ({ onSearchClick = () => {}, onCartClick = () => {} }) => {
         scrolled ? 'bg-neutral-100' : 'bg-neutral-100'
       }`}
     >
-      <div className="site-shell h-14 w-full">
-        <div className="grid h-full grid-cols-[auto_1fr_auto] items-center gap-4 lg:grid-cols-[1fr_auto_1fr]">
+      <div className="site-shell h-[84px] w-full sm:h-[92px] md:h-[104px]">
+        <div className="grid h-full grid-cols-[1fr_auto_1fr] items-center gap-4 lg:grid-cols-[1fr_auto_1fr]">
           {/* Left: Nav */}
           <div className="flex items-center gap-3 justify-self-start lg:gap-6">
             <button
@@ -193,16 +200,25 @@ const Navbar = ({ onSearchClick = () => {}, onCartClick = () => {} }) => {
 
           {/* Center: Logo */}
           <div className="flex justify-center">
-            <Link
-              to="/"
-              className="font-extrabold tracking-[0.55em] text-[13px] leading-none text-neutral-900"
-            >
-              ASANTIALS
+            <Link to="/" className="block">
+              <img
+                src="/images/evrydae-logo-transparent.png"
+                alt="EVRYDAE"
+                className="block h-[70px] w-auto object-contain sm:h-[78px] md:h-[90px]"
+              />
             </Link>
           </div>
 
           {/* Right: Actions */}
           <div className="flex items-center justify-end gap-8 sm:gap-10 lg:gap-14 xl:gap-16">
+            <button
+              type="button"
+              onClick={onSearchClick}
+              className="sm:hidden rounded-full border border-neutral-300 p-2 text-neutral-700 transition hover:border-neutral-900 hover:text-neutral-900"
+              aria-label="Search"
+            >
+              <Search className="h-4 w-4" strokeWidth={1.5} />
+            </button>
             <button
               type="button"
               onClick={onSearchClick}
@@ -234,72 +250,95 @@ const Navbar = ({ onSearchClick = () => {}, onCartClick = () => {} }) => {
         </div>
       </div>
 
+      {/* Mobile menu overlay */}
       <div
         id="primary-navigation"
-        className={`border-t border-neutral-200 transition-[grid-template-rows,opacity] duration-300 lg:hidden ${
-          mobileMenuOpen ? 'grid grid-rows-[1fr] opacity-100' : 'grid grid-rows-[0fr] opacity-0'
+        className={`lg:hidden fixed inset-0 z-40 transition ${
+          mobileMenuOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
         }`}
       >
-        <div className="overflow-hidden">
-          <nav className="site-shell flex flex-col gap-4 py-4 text-[11px] tracking-[0.3em] text-neutral-600 font-semibold">
-            {navLinks.map((link) => {
-              const childActive = link.children?.some((child) => child.value === activeCategory);
-              const isActive = isProductsPath && (activeCategory === link.value || childActive);
-              const isDropdownOpen = mobileDropdown === link.value;
+        <button
+          type="button"
+          aria-hidden
+          onClick={() => setMobileMenuOpen(false)}
+          className={`absolute inset-0 bg-black/40 transition ${mobileMenuOpen ? 'opacity-100' : 'opacity-0'}`}
+        />
+        <nav
+          className={`absolute left-0 top-0 flex h-full w-[82%] max-w-sm flex-col gap-2 bg-white px-5 pb-8 pt-6 shadow-2xl transition-transform duration-300 ${
+            mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+        >
+          <div className="mb-4 text-[11px] uppercase tracking-[0.32em] text-neutral-500">
+            Menu
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              onSearchClick();
+              setMobileMenuOpen(false);
+            }}
+            className="flex items-center justify-between rounded border border-neutral-200 px-4 py-3 text-[11px] uppercase tracking-[0.3em] text-neutral-700 transition hover:border-neutral-900 hover:text-neutral-900"
+          >
+            Search
+            <span aria-hidden>⌕</span>
+          </button>
+          {navLinks.map((link) => {
+            const childActive = link.children?.some((child) => child.value === activeCategory);
+            const isActive = isProductsPath && (activeCategory === link.value || childActive);
+            const isDropdownOpen = mobileDropdown === link.value;
 
-              return (
-                <div key={`mobile-${link.value}`} className="border-b border-neutral-200 pb-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <Link
-                      to={link.href}
-                      className={`flex-1 font-semibold transition ${
-                        isActive ? 'text-neutral-900' : 'hover:text-neutral-900'
-                      }`}
-                    >
-                      {link.label}
-                    </Link>
-                    {link.children?.length ? (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setMobileDropdown((prev) => (prev === link.value ? null : link.value))
-                        }
-                        aria-expanded={isDropdownOpen}
-                        className="rounded-full border border-neutral-300 p-2 text-neutral-500 transition hover:border-neutral-900 hover:text-neutral-900"
-                      >
-                        <ChevronDown
-                          className={`h-3 w-3 transition ${isDropdownOpen ? 'rotate-180' : ''}`}
-                        />
-                      </button>
-                    ) : null}
-                  </div>
-
+            return (
+              <div key={`mobile-${link.value}`} className="border-b border-neutral-200 pb-3">
+                <div className="flex items-center justify-between gap-2">
+                  <Link
+                    to={link.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex-1 text-[12px] font-semibold uppercase tracking-[0.28em] transition ${
+                      isActive ? 'text-neutral-900' : 'text-neutral-600 hover:text-neutral-900'
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
                   {link.children?.length ? (
-                    <div
-                      className={`ml-4 mr-6 border-l border-neutral-200 pl-4 text-[10px] uppercase tracking-[0.32em] font-semibold transition-[max-height,opacity] duration-200 ${
-                        isDropdownOpen ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0'
-                      }`}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setMobileDropdown((prev) => (prev === link.value ? null : link.value))
+                      }
+                      aria-expanded={isDropdownOpen}
+                      className="rounded-full border border-neutral-300 p-2 text-neutral-500 transition hover:border-neutral-900 hover:text-neutral-900"
                     >
-                      {link.children.map((child) => (
-                        <Link
-                          key={`mobile-${child.value}`}
-                          to={child.href}
-                          className={`block py-2 text-neutral-500 transition ${
-                            activeCategory === child.value
-                              ? 'text-neutral-900'
-                              : 'hover:text-neutral-900'
-                          }`}
-                        >
-                          {child.label}
-                        </Link>
-                      ))}
-                    </div>
+                      <ChevronDown
+                        className={`h-3 w-3 transition ${isDropdownOpen ? 'rotate-180' : ''}`}
+                      />
+                    </button>
                   ) : null}
                 </div>
-              );
-            })}
-          </nav>
-        </div>
+
+                {link.children?.length ? (
+                  <div
+                    className={`ml-3 mt-2 space-y-2 border-l border-neutral-200 pl-3 text-[11px] uppercase tracking-[0.26em] font-semibold transition-all duration-200 ${
+                      isDropdownOpen ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0'
+                    }`}
+                  >
+                    {link.children.map((child) => (
+                      <Link
+                        key={`mobile-${child.value}`}
+                        to={child.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={`block py-1 text-neutral-500 transition ${
+                          activeCategory === child.value ? 'text-neutral-900' : 'hover:text-neutral-900'
+                        }`}
+                      >
+                        {child.label}
+                      </Link>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </nav>
       </div>
     </header>
   );

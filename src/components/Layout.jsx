@@ -10,7 +10,7 @@ import SearchOverlay from './SearchOverlay';
 import CartDrawer from './CartDrawer';
 
 const marqueeItems = [
-  'ASANTIALS',
+  'EVRYDAE',
   'NEW ARRIVALS WEEKLY',
   'EXPRESS SHIPPING',
   'MEMBERS ONLY DROPS',

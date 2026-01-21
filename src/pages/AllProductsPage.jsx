@@ -36,13 +36,15 @@ const toneReviews = [
 
 const collectionsMeta = {
   't-shirts': 'T-Shirts',
-  hoodies: 'Hoodies',
+  jeans: 'Jeans',
   shoes: 'Shoes',
   loafers: 'Loafers',
   boots: 'Boots',
   sneakers: 'Sneakers',
   sandals: 'Sandals',
 };
+
+const shoeHandles = ['shoes', 'loafers', 'boots', 'sneakers', 'sandals'];
 
 const availabilityOptions = [
   { value: 'in-stock', label: 'In Stock' },
@@ -57,17 +59,38 @@ const sortOptions = [
   { value: 'title-desc', label: 'Alphabetical, Z-A' },
 ];
 
+const hiddenHandles = new Set(['home-page', 'homepage', 'frontpage', 'front-page', 'home', 'home page']);
+
+const categoryAliases = {
+  hoodies: 'jeans',
+};
+
+const normalizeCategory = (value) =>
+  value ? categoryAliases[value] ?? value : value;
+
+const resolveCollectionHandle = (value, handles) => {
+  if (!value || value !== 'jeans') return value;
+  if (handles?.size) {
+    if (handles.has('jeans')) return 'jeans';
+    if (handles.has('hoodies')) return 'hoodies';
+  }
+  return value;
+};
+
 // --- Custom Hooks ---
 const useActiveCategory = (initialCategory = 'all') => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const active = searchParams.get('category') ?? initialCategory;
+  const rawCategory = searchParams.get('category') ?? initialCategory;
+  const active = normalizeCategory(rawCategory);
+  const normalizedInitial = normalizeCategory(initialCategory);
 
   const updateCategory = (value) => {
     const next = new URLSearchParams(searchParams);
-    if (!value || value === initialCategory) {
+    const normalizedValue = normalizeCategory(value);
+    if (!normalizedValue || normalizedValue === normalizedInitial) {
       next.delete('category');
     } else {
-      next.set('category', value);
+      next.set('category', normalizedValue);
     }
     setSearchParams(next);
   };
@@ -78,8 +101,9 @@ const useActiveCategory = (initialCategory = 'all') => {
 // --- Main Component ---
 const AllProductsPage = ({ initialCategory = 'all' } = {}) => {
   // 1. State & Hooks
-  const { active, updateCategory } = useActiveCategory(initialCategory);
   const location = useLocation();
+  const pathCategory = location.pathname.startsWith('/shoes') ? 'shoes' : initialCategory;
+  const { active, updateCategory } = useActiveCategory(pathCategory);
   const {
     products: catalogProducts,
     collections,
@@ -92,63 +116,174 @@ const AllProductsPage = ({ initialCategory = 'all' } = {}) => {
   const [selectedSizes, setSelectedSizes] = useState([]);
   const [availabilityFilter, setAvailabilityFilter] = useState('all');
   const [sortBy, setSortBy] = useState('featured');
-  
+
+  const collectionHandles = useMemo(
+    () =>
+      new Set(
+        (collections ?? []).map((collection) => collection?.handle).filter(Boolean),
+      ),
+    [collections],
+  );
+  const activeCollectionHandle = resolveCollectionHandle(active, collectionHandles);
+
   // UI State for dropdowns
   const [sizeFilterOpen, setSizeFilterOpen] = useState(false);
   const [availabilityFilterOpen, setAvailabilityFilterOpen] = useState(false);
+  const [currentReview, setCurrentReview] = useState(0);
   const sizePopoverRef = useRef(null);
   const availabilityPopoverRef = useRef(null);
+
+  // Auto-advance the review carousel
+  useEffect(() => {
+    const timer = setInterval(
+      () => setCurrentReview((prev) => (prev + 1) % toneReviews.length),
+      3000,
+    );
+    return () => clearInterval(timer);
+  }, []);
 
   // 2. Data Logic
   const navItems = useMemo(() => {
     const items = [{ value: 'all', label: 'View All' }];
     Object.entries(collectionsMeta).forEach(([value, label]) => {
-      items.push({ value, label });
+      items.push({ value: normalizeCategory(value), label });
     });
     (collections ?? [])
-      .filter((collection) => collection?.handle && collection?.title)
+      .filter(
+        (collection) =>
+          collection?.handle &&
+          collection?.title &&
+          !hiddenHandles.has(String(collection.handle).toLowerCase()),
+      )
       .forEach((collection) => {
-        if (!items.some((item) => item.value === collection.handle)) {
-          items.push({ value: collection.handle, label: collection.title });
+        const normalizedValue = normalizeCategory(collection.handle);
+        if (!items.some((item) => item.value === normalizedValue)) {
+          items.push({
+            value: normalizedValue,
+            label: collectionsMeta[normalizedValue] ?? collection.title,
+          });
         }
       });
     return items;
   }, [collections]);
 
-  const hasCollectionProducts = collectionProducts[active];
+  const hasCollectionProducts = collectionProducts[activeCollectionHandle];
 
   useEffect(() => {
     if (active === 'all' || hasCollectionProducts) return;
     let cancelled = false;
     setCollectionLoading(true);
 
-    ensureCollectionProducts(active, { limit: 60 })
+    ensureCollectionProducts(activeCollectionHandle, { limit: 60 })
       .then((productsForCollection) => {
         if (cancelled || !productsForCollection) return;
         setCollectionProducts((prev) => ({
           ...prev,
-          [active]: productsForCollection,
+          [activeCollectionHandle]: productsForCollection,
         }));
       })
-      .catch((error) => console.error(`Failed to load collection "${active}"`, error))
+      .catch((error) =>
+        console.error(`Failed to load collection "${activeCollectionHandle}"`, error),
+      )
       .finally(() => {
         if (!cancelled) setCollectionLoading(false);
       });
 
     return () => { cancelled = true; };
-  }, [active, hasCollectionProducts, ensureCollectionProducts]);
+  }, [active, activeCollectionHandle, hasCollectionProducts, ensureCollectionProducts]);
+
+  // Ensure shoe sub-collections are loaded when viewing Shoes
+  useEffect(() => {
+    if (active !== 'shoes') return;
+    let cancelled = false;
+
+    const handlesToFetch = shoeHandles.filter((handle) => !collectionProducts[handle]);
+    if (!handlesToFetch.length) return;
+
+    setCollectionLoading(true);
+    Promise.all(
+      handlesToFetch.map((handle) =>
+        ensureCollectionProducts(handle, { limit: 60 }).catch((error) => {
+          console.error(`Failed to load shoe collection "${handle}"`, error);
+          return null;
+        }),
+      ),
+    )
+      .then((results) => {
+        if (cancelled) return;
+        setCollectionProducts((prev) => {
+          const next = { ...prev };
+          results.forEach((productsForHandle, idx) => {
+            const handle = handlesToFetch[idx];
+            if (productsForHandle) {
+              next[handle] = productsForHandle;
+            }
+          });
+          return next;
+        });
+      })
+      .finally(() => {
+        if (!cancelled) setCollectionLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [active, collectionProducts, ensureCollectionProducts]);
 
   const filteredProducts = useMemo(() => {
     if (active === 'all') return catalogProducts ?? [];
-    return collectionProducts[active] ?? [];
-  }, [active, catalogProducts, collectionProducts]);
+    if (active === 'shoes') {
+      const merged = [];
+      const seen = new Set();
+
+      const addProduct = (product) => {
+        if (!product?.id || seen.has(product.id)) return;
+        seen.add(product.id);
+        merged.push(product);
+      };
+
+      shoeHandles.forEach((handle) => {
+        (collectionProducts[handle] ?? []).forEach(addProduct);
+      });
+
+      // Fallback: include any catalog products tagged to shoe collections
+      (catalogProducts ?? []).forEach((product) => {
+        const handles =
+          product?.collections?.map((c) => String(c.handle || '').toLowerCase()) ?? [];
+        if (handles.some((h) => shoeHandles.includes(h))) {
+          addProduct(product);
+        }
+      });
+
+      return merged;
+    }
+    return collectionProducts[activeCollectionHandle] ?? [];
+  }, [active, activeCollectionHandle, catalogProducts, collectionProducts]);
+
+  const collectSizes = (product) => {
+    const values = new Set();
+    (product?.options ?? []).forEach((opt) => {
+      if (opt?.name?.toLowerCase().includes('size')) {
+        (opt.values ?? []).forEach((v) => v && values.add(v));
+      }
+    });
+    (product?.variants ?? []).forEach((variant) => {
+      (variant?.selectedOptions ?? []).forEach((opt) => {
+        if (opt?.name?.toLowerCase().includes('size') && opt?.value) {
+          values.add(opt.value);
+        }
+      });
+    });
+    // Fallback to legacy helper
+    extractOptionValues(product, 'size').forEach((v) => v && values.add(v));
+    return Array.from(values);
+  };
 
   const sizeOptions = useMemo(() => {
     const values = new Set();
     filteredProducts.forEach((product) => {
-      extractOptionValues(product, 'size').forEach((size) => {
-        if (size) values.add(size);
-      });
+      collectSizes(product).forEach((size) => values.add(size));
     });
     return Array.from(values).sort((a, b) => a.localeCompare(b));
   }, [filteredProducts]);
@@ -159,7 +294,7 @@ const AllProductsPage = ({ initialCategory = 'all' } = {}) => {
     
     const matchesSize = (product) => {
       if (!hasSizeFilter) return true;
-      const productSizes = extractOptionValues(product, 'size').map((value) => normaliseTokenValue(value));
+      const productSizes = collectSizes(product).map((value) => normaliseTokenValue(value));
       if (!productSizes.length) return false;
       return selectedTokens.some((token) => productSizes.includes(token));
     };
@@ -193,7 +328,9 @@ const AllProductsPage = ({ initialCategory = 'all' } = {}) => {
   );
 
   const totalCount = filteredAndSortedProducts.length;
-  const isLoading = catalogLoading || (active !== 'all' && !collectionProducts[active] && collectionLoading);
+  const isLoading =
+    catalogLoading ||
+    (active !== 'all' && !collectionProducts[activeCollectionHandle] && collectionLoading);
 
   // Click outside handler
   useEffect(() => {
@@ -227,10 +364,10 @@ const AllProductsPage = ({ initialCategory = 'all' } = {}) => {
           "View All" anchored left, Categories centered. 
           Matches reference layout below main header.
       */}
-      <nav className="relative flex items-center border-b border-neutral-300 bg-[#f2f2f2] px-6 py-4 lg:px-10 lg:pt-8">
+      <nav className="relative flex flex-wrap items-center gap-3 border-b border-neutral-300 bg-[#f2f2f2] px-4 py-3 sm:px-6 lg:flex-nowrap lg:px-10 lg:pt-8 mb-4">
         
         {/* Left Anchor: View All */}
-        <div className="mr-auto shrink-0 z-10">
+        <div className="z-10 mr-auto shrink-0">
           <button
             onClick={() => updateCategory('all')}
             className={`text-[12px] font-bold uppercase tracking-wide underline underline-offset-4 ${
@@ -244,7 +381,7 @@ const AllProductsPage = ({ initialCategory = 'all' } = {}) => {
         {/* Center: Scrollable Category List */}
         {/* We use absolute positioning on large screens to ensure true centering relative to screen, 
             but flex on small screens for scrollability */}
-        <div className="flex flex-1 justify-center gap-6 overflow-x-auto px-4 scrollbar-hide lg:absolute lg:inset-x-0 lg:mx-auto lg:w-fit">
+        <div className="flex flex-1 justify-center gap-4 overflow-x-auto px-2 scrollbar-hide sm:gap-6 lg:max-w-[780px] lg:mx-auto lg:px-0">
           {navItems
             .filter((item) => item.value !== 'all')
             .map((item) => {
@@ -268,10 +405,10 @@ const AllProductsPage = ({ initialCategory = 'all' } = {}) => {
       </nav>
 
       {/* --- FILTER & SORT BAR --- */}
-      <div className="flex flex-col justify-between gap-4 px-6 py-8 text-[11px] uppercase tracking-wide lg:flex-row lg:items-center lg:px-10">
+      <div className="flex flex-col justify-between gap-4 px-4 py-6 text-[11px] uppercase tracking-wide sm:px-6 lg:flex-row lg:items-center lg:px-10 lg:mt-1 mt-2">
         
         {/* Left: Filters */}
-        <div className="flex items-center gap-6">
+        <div className="flex flex-wrap items-center gap-4 sm:gap-6">
           <span className="font-bold">Filter:</span>
           
           {/* Size Filter */}
@@ -285,7 +422,7 @@ const AllProductsPage = ({ initialCategory = 'all' } = {}) => {
             </button>
 
             {sizeFilterOpen && sizeOptions.length > 0 && (
-                <div className="absolute left-0 z-30 mt-2 w-64 border border-neutral-200 bg-white p-4 shadow-xl">
+                <div className="absolute left-0 z-30 mt-2 w-64 rounded-md border border-neutral-200 bg-white p-4 shadow-xl">
                     <div className="mb-3 flex justify-between text-[10px]">
                         <span>{selectedSizes.length} Selected</span>
                         <button onClick={() => setSelectedSizes([])} className="underline">Reset</button>
@@ -316,7 +453,7 @@ const AllProductsPage = ({ initialCategory = 'all' } = {}) => {
             </button>
             
             {availabilityFilterOpen && (
-               <div className="absolute left-0 z-30 mt-2 w-48 border border-neutral-200 bg-white p-4 shadow-xl">
+               <div className="absolute left-0 z-30 mt-2 w-48 rounded-md border border-neutral-200 bg-white p-4 shadow-xl">
                    {availabilityOptions.map((option) => (
                        <label key={option.value} className="flex cursor-pointer items-center gap-3 py-1">
                            <input 
@@ -334,7 +471,7 @@ const AllProductsPage = ({ initialCategory = 'all' } = {}) => {
         </div>
 
         {/* Right: Sort & Count */}
-        <div className="flex items-center gap-6">
+        <div className="flex flex-wrap items-center gap-4 sm:gap-6">
            <span className="text-neutral-500">Sort By:</span>
            <div className="relative">
              <select
@@ -359,7 +496,7 @@ const AllProductsPage = ({ initialCategory = 'all' } = {}) => {
             Loading products...
           </p>
         ) : (
-          <div className="grid grid-cols-1 gap-x-2 gap-y-8 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-x-2 gap-y-8 sm:grid-cols-2 lg:grid-cols-4">
             {productCards.length > 0 ? (
               productCards.map((item) => <ProductCard key={item.href} item={item} />)
             ) : (
@@ -381,34 +518,80 @@ const AllProductsPage = ({ initialCategory = 'all' } = {}) => {
         </div>
 
         <div className="border-t border-neutral-300 pt-12 text-left">
-           <div className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
-                <div>
-                    <p className="text-[10px] uppercase tracking-widest text-neutral-500">Collective Notes</p>
-                    <h3 className="mt-2 text-xl font-bold uppercase tracking-wide">Trusted by the Crew</h3>
-                </div>
-                <div className="flex gap-1">
-                    {[...Array(5)].map((_, i) => <Star key={i} className="h-4 w-4 fill-black text-black" />)}
-                </div>
-           </div>
+          <div className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-neutral-500">Collective Notes</p>
+              <h3 className="mt-2 text-xl font-bold uppercase tracking-wide">Trusted by the Crew</h3>
+            </div>
+            <div className="flex gap-1">
+              {[...Array(5)].map((_, i) => (
+                <Star key={i} className="h-4 w-4 fill-black text-black" />
+              ))}
+            </div>
+          </div>
 
-           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-               {toneReviews.map((review, i) => (
-                   <div key={i} className="flex flex-col justify-between bg-white p-6 shadow-sm">
-                       <div>
-                           <div className="mb-4 flex items-center gap-3">
-                               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black text-[10px] text-white">
-                                   {review.initials}
-                               </div>
-                               <div>
-                                   <p className="text-[11px] font-bold uppercase">{review.name}</p>
-                                   <p className="text-[9px] uppercase text-neutral-500">{review.role}</p>
-                               </div>
-                           </div>
-                           <p className="text-xs leading-relaxed text-neutral-700">"{review.quote}"</p>
-                       </div>
-                   </div>
-               ))}
-           </div>
+          <div className="relative">
+            <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
+              <div
+                className="flex transition-transform duration-500"
+                style={{ transform: `translateX(-${currentReview * 100}%)` }}
+              >
+                {toneReviews.map((review, i) => (
+                  <article key={i} className="min-w-full px-6 py-8 sm:px-10 sm:py-10">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black text-[10px] uppercase text-white sm:h-12 sm:w-12">
+                        {review.initials}
+                      </div>
+                      <div className="text-xs uppercase tracking-[0.24em] text-neutral-500">
+                        <p className="text-neutral-900">{review.name}</p>
+                        <p>{review.role}</p>
+                      </div>
+                    </div>
+                    <p className="mt-6 text-sm leading-relaxed text-neutral-700">"{review.quote}"</p>
+                  </article>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCurrentReview((prev) => (prev - 1 + toneReviews.length) % toneReviews.length)
+                  }
+                  className="h-9 w-9 rounded-full border border-neutral-300 text-neutral-700 transition hover:border-neutral-900 hover:text-neutral-900"
+                  aria-label="Previous review"
+                >
+                  ‹
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCurrentReview((prev) => (prev + 1) % toneReviews.length)}
+                  className="h-9 w-9 rounded-full border border-neutral-300 text-neutral-700 transition hover:border-neutral-900 hover:text-neutral-900"
+                  aria-label="Next review"
+                >
+                  ›
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                {toneReviews.map((_, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => setCurrentReview(index)}
+                    className={`h-2 w-6 rounded-full transition ${
+                      currentReview === index
+                        ? 'bg-neutral-900'
+                        : 'bg-neutral-300 hover:bg-neutral-500'
+                    }`}
+                    aria-label={`Go to review ${index + 1}`}
+                    aria-pressed={currentReview === index}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </footer>
     </div>
@@ -416,3 +599,4 @@ const AllProductsPage = ({ initialCategory = 'all' } = {}) => {
 };
 
 export default AllProductsPage;
+

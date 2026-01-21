@@ -1,6 +1,7 @@
 // src/components/HeroWith3D.jsx
 import React, { useEffect, useRef, useState } from 'react';
 import defaultHeroVideo from '../assets/Coin_in_Nature_Climate_Video.mp4';
+import AntigravityLogo from './AntigravityLogo';
 
 const SPLINE_SCENE_URL = 'https://my.spline.design/aethirathgold-Yt10PlgylthzK19E5WCrB74M/';
 
@@ -39,8 +40,17 @@ export default function HeroWith3D({ heroVideoSrc }) {
       />
 
       <div className="relative flex-1">
-        <iframe
-          title="ASANTIALS 3D Experience"
+        {/* ANTIGRAVITY 3D LOGO - NEW */}
+        <div
+          className="absolute inset-0 z-20 h-full w-full"
+          style={{ transform: `translateY(${parallaxOffset}px)` }}
+        >
+          <AntigravityLogo stlPath="/evrydae_hollow.stl" />
+        </div>
+
+        {/* SPLINE 3D MODEL - COMMENTED OUT */}
+        {/* <iframe
+          title="EVRYDAE 3D Experience"
           src={SPLINE_SCENE_URL}
           frameBorder="0"
           width="100%"
@@ -48,7 +58,7 @@ export default function HeroWith3D({ heroVideoSrc }) {
           allow="autoplay; fullscreen"
           className="absolute inset-0 z-20 h-full w-full"
           style={{ transform: `translateY(${parallaxOffset}px)` }}
-        />
+        /> */}
       </div>
 
       <div className="pointer-events-none absolute inset-0 z-30 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />

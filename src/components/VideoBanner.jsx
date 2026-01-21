@@ -31,7 +31,7 @@ export default function VideoBanner({ videoSrc = bannerVideo }) {
               Discover More
             </span>
             <span className="text-4xl font-black tracking-[0.6em] md:text-5xl lg:text-6xl">
-              ASANTIALS
+              EVRYDAE
             </span>
           </div>
         </div>

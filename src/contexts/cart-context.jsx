@@ -11,7 +11,7 @@ import React, {
 
 const CartContext = createContext(undefined);
 
-const storageKey = 'asantials-cart-v1';
+const storageKey = 'evrydae-cart-v1';
 
 const createId = (slug, size) => `${slug}::${size ?? 'onesize'}`;
 

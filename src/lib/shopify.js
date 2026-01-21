@@ -248,6 +248,11 @@ export function findVariantForSize(product, size) {
   const variants = product?.variants ?? [];
   if (!variants.length) return null;
 
+  const isSizeOptionName = (name) => {
+    const token = normaliseTokenValue(name);
+    return token === 'size' || token.includes('size');
+  };
+
   if (!size) {
     return variants[0] ?? null;
   }
@@ -257,7 +262,7 @@ export function findVariantForSize(product, size) {
   const matchByOption = variants.find((variant) =>
     variant.selectedOptions?.some(
       (option) =>
-        normaliseTokenValue(option?.name) === 'size' &&
+        isSizeOptionName(option?.name) &&
         normaliseTokenValue(option?.value) === target,
     ),
   );
@@ -293,10 +298,10 @@ const defaultMenuItems = [
     kind: "collection",
   },
   {
-    id: "collection-hoodies",
-    label: "Hoodies",
-    to: "/products?category=hoodies",
-    handle: "hoodies",
+    id: "collection-jeans",
+    label: "Jeans",
+    to: "/products?category=jeans",
+    handle: "jeans",
     kind: "collection",
   },
 ];
@@ -644,6 +649,12 @@ export async function fetchProductByHandle(handle) {
         { namespace: "custom",  key: "shipping" },
         { namespace: "custom",  key: "size_chart_json" },
         { namespace: "custom",  key: "size_chart" },
+        { namespace: "custom",  key: "sizechart" },
+        { namespace: "custom",  key: "shoe_size_chart" },
+        { namespace: "custom",  key: "shoe_sizechart" },
+        { namespace: "custom",  key: "mens_shoe_size_chart" },
+        { namespace: "custom",  key: "mens_shoe_sizechart" },
+        { namespace: "custom",  key: "size_chart_url" },
 
         { namespace: "details", key: "materials" },
         { namespace: "details", key: "material" },
@@ -652,6 +663,12 @@ export async function fetchProductByHandle(handle) {
         { namespace: "details", key: "colour" },
         { namespace: "details", key: "color" },
         { namespace: "details", key: "type_of_shoe" }
+        ,
+        { namespace: "details", key: "origin" },
+        { namespace: "custom", key: "origin" },
+        { namespace: "info", key: "origin" },
+        { namespace: "global", key: "origin" },
+        { namespace: "theme", key: "origin" }
       ]) {
         key
         namespace
@@ -1174,7 +1191,16 @@ export async function fetchArticlesFromBlog(blogHandle, limit = 10) {
 
 /* ================= RECOMMENDATIONS & PAGINATION ================= */
 
-export async function fetchRecommendedProducts(productId, limit = 8) {
+export async function fetchRecommendedProducts(productOrId, limit = 8) {
+  const isObject = typeof productOrId === "object" && productOrId !== null;
+  const productId = isObject ? productOrId.id : productOrId;
+  const productHandle = isObject ? productOrId.handle : null;
+  const collectionHandles = isObject
+    ? (productOrId.collections ?? [])
+        .map((c) => c?.handle)
+        .filter(Boolean)
+    : [];
+
   const q = `#graphql
   query($productId: ID!) {
     productRecommendations(productId: $productId) {
@@ -1186,9 +1212,77 @@ export async function fetchRecommendedProducts(productId, limit = 8) {
       tags
     }
   }`;
-  const data = await graphql(q, { productId });
-  const items = filterVisibleNodes(data.productRecommendations || []);
-  return items.slice(0, limit);
+
+  const normaliseList = (nodes = []) =>
+    (nodes || []).map(normalizeProductNode).filter(Boolean);
+
+  let products = [];
+
+  if (productId) {
+    try {
+      const data = await graphql(q, { productId });
+      products = normaliseList(filterVisibleNodes(data.productRecommendations || []));
+    } catch (error) {
+      console.warn("fetchRecommendedProducts: primary query failed", error);
+    }
+  }
+
+  const dedupeAndTrim = (nodes = []) => {
+    const seen = new Set();
+    const out = [];
+    for (const node of nodes) {
+      if (!node || !node.handle) continue;
+      if (productHandle && node.handle === productHandle) continue;
+      if (seen.has(node.handle)) continue;
+      seen.add(node.handle);
+      out.push(node);
+      if (out.length >= limit) break;
+    }
+    return out;
+  };
+
+  if (!products.length) {
+    for (const handle of collectionHandles) {
+      try {
+        const fallback = normaliseList(
+          await fetchProductsFromCollection(handle, limit + 3)
+        );
+        if (fallback.length) {
+          products = fallback;
+          break;
+        }
+      } catch (error) {
+        console.warn(
+          `fetchRecommendedProducts: collection fallback failed (${handle})`,
+          error
+        );
+      }
+    }
+  }
+
+  if (!products.length) {
+    try {
+      const fallback = normaliseList(
+        await fetchProductsFromCollection("frontpage", limit + 3)
+      );
+      products = fallback;
+    } catch (error) {
+      console.warn("fetchRecommendedProducts: frontpage fallback failed", error);
+    }
+  }
+
+  if (products.length < limit) {
+    try {
+      const fallback = normaliseList(
+        await fetchAllProducts(Math.max(limit * 2, 12))
+      );
+      products = [...products, ...fallback];
+    } catch (error) {
+      console.warn("fetchRecommendedProducts: full catalogue fallback failed", error);
+    }
+  }
+
+  return dedupeAndTrim(products);
 }
 
 export async function searchProductsPage(query, limit = 24, after = null) {

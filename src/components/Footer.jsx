@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 
 const shippingMessages = [
   "Shipping Worldwide",
-  "Asantials Express Dispatch",
+  "EVRYDAE Express Dispatch",
   "Track Your Order 24/7",
   "Complimentary Pick-Ups For Returns",
   "Exclusive Online Drops",
@@ -212,7 +212,7 @@ const SiteFooter = () => (
             </a>
           </div>
           <p className="mt-6 text-[11px] uppercase tracking-[0.35em] text-neutral-500">
-            © 2025 Asantials Retail Private Limited. All Rights Reserved.
+            (c) 2025 EVRYDAE Retail Private Limited. All Rights Reserved.
           </p>
         </div>
       </div>

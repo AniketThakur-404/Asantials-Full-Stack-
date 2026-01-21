@@ -105,7 +105,7 @@ export default function HomePage() {
 
       <VideoBanner />
 
-      <ProductGrid title="More From Asantials" products={moreProducts} ctaHref="/products" />
+      <ProductGrid title="More From EVRYDAE" products={moreProducts} ctaHref="/products" />
     </>
   );
 }

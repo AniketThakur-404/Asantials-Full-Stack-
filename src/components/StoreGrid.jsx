@@ -32,7 +32,7 @@ export default function StoreGrid() {
     <section className="site-shell section-gap lg:px-10">
       <div className="border-t border-neutral-200 py-4">
         <h2 className="text-[11px] uppercase tracking-[0.35em] text-neutral-600">
-          Asantials Stores
+          EVRYDAE Stores
         </h2>
       </div>
 
