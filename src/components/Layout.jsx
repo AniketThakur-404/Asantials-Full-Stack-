@@ -1,6 +1,6 @@
 // src/components/Layout.jsx
-import React, { useMemo, useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import CatalogProvider from '../contexts/catalog-context';
@@ -46,6 +46,7 @@ const TopAnnouncement = () => (
 const Layout = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
+  const location = useLocation();
 
   const outletContext = useMemo(
     () => ({
@@ -55,8 +56,12 @@ const Layout = () => {
     [],
   );
 
+  useEffect(() => {
+    setSearchOpen(false);
+  }, [location.pathname, location.search]);
+
   return (
-    <CatalogProvider>
+    <CatalogProvider productLimit={250}>
       <CartProvider>
         <NotificationProvider>
           <div className="bg-white text-neutral-900 min-h-screen flex flex-col">

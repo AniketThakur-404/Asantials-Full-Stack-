@@ -40,7 +40,7 @@ export default function StoreGrid() {
         <div
           className="
             no-scrollbar
-            ml-14 flex gap-4 sm:gap-5 md:gap-6 lg:gap-8
+            ml-0 flex gap-4 sm:ml-6 sm:gap-5 md:gap-6 lg:ml-14 lg:gap-8
             overflow-x-auto px-4 pb-4 sm:px-6 md:px-8 lg:px-10
             snap-x snap-mandatory
           "

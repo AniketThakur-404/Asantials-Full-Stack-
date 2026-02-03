@@ -102,7 +102,8 @@ const useActiveCategory = (initialCategory = 'all') => {
 const AllProductsPage = ({ initialCategory = 'all' } = {}) => {
   // 1. State & Hooks
   const location = useLocation();
-  const pathCategory = location.pathname.startsWith('/shoes') ? 'shoes' : initialCategory;
+  const isShoesRoot = /^\/shoes\/?$/.test(location.pathname);
+  const pathCategory = isShoesRoot ? 'shoes' : initialCategory;
   const { active, updateCategory } = useActiveCategory(pathCategory);
   const {
     products: catalogProducts,
@@ -358,7 +359,7 @@ const AllProductsPage = ({ initialCategory = 'all' } = {}) => {
 
   // 3. Render
   return (
-    <div className="w-full bg-[#f2f2f2] font-sans text-black">
+    <div className="w-full bg-[#f2f2f2] font-body text-black">
       
       {/* --- SECONDARY NAVIGATION STRIP --- 
           "View All" anchored left, Categories centered. 
@@ -415,7 +416,7 @@ const AllProductsPage = ({ initialCategory = 'all' } = {}) => {
           <div className="relative" ref={sizePopoverRef}>
             <button
               onClick={() => setSizeFilterOpen(!sizeFilterOpen)}
-              className="flex items-center gap-1 hover:text-neutral-600"
+              className="flex items-center gap-1 uppercase hover:text-neutral-600"
             >
               Size {selectedSizes.length > 0 && `(${selectedSizes.length})`}
               <ChevronDown className={`h-3 w-3 transition-transform ${sizeFilterOpen ? 'rotate-180' : ''}`} />
@@ -446,7 +447,7 @@ const AllProductsPage = ({ initialCategory = 'all' } = {}) => {
           <div className="relative" ref={availabilityPopoverRef}>
             <button
               onClick={() => setAvailabilityFilterOpen(!availabilityFilterOpen)}
-              className="flex items-center gap-1 hover:text-neutral-600"
+              className="flex items-center gap-1 uppercase hover:text-neutral-600"
             >
               Availability
               <ChevronDown className={`h-3 w-3 transition-transform ${availabilityFilterOpen ? 'rotate-180' : ''}`} />

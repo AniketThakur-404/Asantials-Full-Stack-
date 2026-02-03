@@ -71,6 +71,9 @@ const ProductDetails = () => {
   const [sizeChartOpen, setSizeChartOpen] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
   const imageRefs = useRef([]);
+  const carouselRef = useRef(null);
+  const scrollRafRef = useRef(null);
+  const activeImageRef = useRef(0);
   const [showStickyCart, setShowStickyCart] = useState(false);
   const sizesSectionRef = useRef(null);
 
@@ -404,6 +407,15 @@ const ProductDetails = () => {
   }, []);
 
   useEffect(() => {
+    if (!sizeChartOpen) return undefined;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [sizeChartOpen]);
+
+  useEffect(() => {
   }, [product]);
 
   // Compute product images before conditional returns to maintain hook order
@@ -422,8 +434,21 @@ const ProductDetails = () => {
   }, [activeImage, productImages.length]);
 
   useEffect(() => {
+    activeImageRef.current = activeImage;
+  }, [activeImage]);
+
+  useEffect(() => {
     imageRefs.current = imageRefs.current.slice(0, productImages.length);
   }, [productImages.length]);
+
+  useEffect(() => {
+    return () => {
+      if (scrollRafRef.current) {
+        cancelAnimationFrame(scrollRafRef.current);
+        scrollRafRef.current = null;
+      }
+    };
+  }, []);
 
   // Early returns after all hooks
   if (loading) {
@@ -467,6 +492,35 @@ const ProductDetails = () => {
     if (node) {
       node.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
     }
+  };
+
+  const handleCarouselScroll = () => {
+    if (scrollRafRef.current) {
+      cancelAnimationFrame(scrollRafRef.current);
+    }
+    scrollRafRef.current = requestAnimationFrame(() => {
+      const container = carouselRef.current;
+      if (!container || !imageRefs.current.length) return;
+      const containerRect = container.getBoundingClientRect();
+      const containerCenter = containerRect.left + containerRect.width / 2;
+      let closestIndex = 0;
+      let closestDistance = Infinity;
+
+      imageRefs.current.forEach((node, index) => {
+        if (!node) return;
+        const rect = node.getBoundingClientRect();
+        const center = rect.left + rect.width / 2;
+        const distance = Math.abs(center - containerCenter);
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestIndex = index;
+        }
+      });
+
+      if (closestIndex !== activeImageRef.current) {
+        setActiveImage(closestIndex);
+      }
+    });
   };
 
   const showPrevImage = () => {
@@ -543,26 +597,33 @@ const ProductDetails = () => {
   return (
     <article className="bg-neutral-50 text-neutral-900">
       <div className="site-shell section-gap">
+        {/* Mobile-only breadcrumb above gallery */}
+        <div className="mb-6 lg:hidden">
+          <Breadcrumbs title={product.title} className="mb-2" />
+        </div>
+
         <div className="grid gap-10 lg:grid-cols-[minmax(340px,440px)_minmax(0,1fr)_minmax(320px,380px)] lg:items-start lg:gap-14">
           {/* Info column */}
-          <div className="order-2 space-y-8 lg:order-1 lg:sticky lg:top-24 lg:self-start">
-            <Breadcrumbs title={product.title} className="mb-2" />
-            <div className="space-y-3">
-              <h1 className="text-3xl font-semibold uppercase tracking-[0.25em] text-neutral-900">
-                {product.title}
-              </h1>
-              {subheading?.text && (
-                <p className="text-sm uppercase tracking-[0.3em] text-neutral-500">
-                  {subheading.text}
-                </p>
-              )}
-              {subheading?.html && (
-                <div
-                  className="text-sm uppercase tracking-[0.3em] text-neutral-500"
-                  dangerouslySetInnerHTML={{ __html: subheading.html }}
-                />
-              )}
-              <p className="text-lg tracking-[0.18em] text-neutral-600">{priceLabel}</p>
+          <div className="order-3 space-y-8 lg:order-1 lg:sticky lg:top-24 lg:self-start">
+            <div className="hidden lg:block">
+              <Breadcrumbs title={product.title} className="mb-2" />
+              <div className="space-y-3">
+                <h1 className="text-3xl font-semibold uppercase tracking-[0.25em] text-neutral-900">
+                  {product.title}
+                </h1>
+                {subheading?.text && (
+                  <p className="text-sm uppercase tracking-[0.3em] text-neutral-500">
+                    {subheading.text}
+                  </p>
+                )}
+                {subheading?.html && (
+                  <div
+                    className="text-sm uppercase tracking-[0.3em] text-neutral-500"
+                    dangerouslySetInnerHTML={{ __html: subheading.html }}
+                  />
+                )}
+                <p className="text-lg tracking-[0.18em] text-neutral-600">{priceLabel}</p>
+              </div>
             </div>
 
             {infoSections.length > 0 && (
@@ -588,8 +649,12 @@ const ProductDetails = () => {
           {/* Gallery column */}
           <div className="order-1 space-y-4 lg:order-2">
             {/* Mobile: carousel */}
-            <div className="relative overflow-hidden rounded border border-neutral-200 bg-white lg:hidden">
-              <div className="flex gap-3 overflow-x-auto scroll-smooth snap-x snap-mandatory bg-neutral-100 p-2 no-scrollbar">
+            <div className="relative overflow-hidden border border-neutral-200 bg-white lg:hidden">
+              <div
+                ref={carouselRef}
+                onScroll={handleCarouselScroll}
+                className="flex gap-3 overflow-x-auto scroll-smooth snap-x snap-mandatory bg-neutral-100 p-2 no-scrollbar"
+              >
                 {productImages.length ? (
                   productImages.map((image, index) => (
                     <div
@@ -597,7 +662,7 @@ const ProductDetails = () => {
                       ref={(el) => {
                         imageRefs.current[index] = el;
                       }}
-                      className={`relative snap-start rounded-sm border ${activeImage === index ? 'border-neutral-900' : 'border-transparent'} min-w-[85%] sm:min-w-[65%]`}
+                      className={`relative snap-start border ${activeImage === index ? 'border-neutral-900' : 'border-transparent'} min-w-[85%] sm:min-w-[65%]`}
                     >
                       <img
                         src={image.url}
@@ -689,41 +754,81 @@ const ProductDetails = () => {
             )}
           </div>
 
-          {/* Actions column */}
-          <div className="order-3 lg:sticky lg:top-24 lg:self-start">
-            <div className="space-y-6 border border-neutral-200 bg-white p-6">
-              {hasSizes && (
-                <section ref={sizesSectionRef}>
-                  <div className="mb-4 flex items-center justify-between">
-                    <h2 className="text-[11px] uppercase tracking-[0.32em] text-neutral-600">
-                      Size
-                    </h2>
-                    <button
-                      type="button"
-                      onClick={() => canOpenSizeChart && setSizeChartOpen(true)}
-                      disabled={!canOpenSizeChart}
-                      className={`text-[10px] uppercase tracking-[0.26em] underline-offset-4 transition ${canOpenSizeChart
-                        ? 'text-neutral-700 hover:underline'
-                        : 'cursor-not-allowed text-neutral-300'
-                        }`}
-                    >
-                      Size Chart
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                    {sizeOptions.map((size) => (
+            {/* Actions column */}
+            <div className="order-2 lg:order-3 lg:sticky lg:top-24 lg:self-start">
+              <div className="space-y-6 border border-neutral-200 bg-white p-6">
+                <div className="space-y-2 lg:hidden">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 space-y-1 pr-2">
+                      <h2 className="text-[15px] font-semibold uppercase leading-tight tracking-[0.2em] text-neutral-900 break-words sm:text-lg">
+                        {product.title}
+                      </h2>
+                      <p className="text-[12px] tracking-[0.14em] text-neutral-600 sm:text-[13px]">
+                        {priceLabel}
+                      </p>
+                    </div>
+                    {hasSizes && (
                       <button
-                        key={size}
                         type="button"
-                        onClick={() => setSelectedSize(size)}
-                        className={`border px-3 py-3 text-xs font-semibold uppercase tracking-[0.2em] transition ${selectedSize === size
-                          ? 'border-neutral-900 bg-neutral-900 text-white'
-                          : 'border-neutral-200 text-neutral-700 hover:border-neutral-900'
-                          }`}
+                        onClick={() => canOpenSizeChart && setSizeChartOpen(true)}
+                        disabled={!canOpenSizeChart}
+                        className={`shrink-0 rounded-full px-4 py-2 text-[10px] uppercase tracking-[0.22em] transition ${
+                          canOpenSizeChart
+                            ? 'bg-neutral-900 text-white'
+                            : 'cursor-not-allowed bg-neutral-200 text-neutral-400'
+                        }`}
                       >
-                        {size}
+                        Size Chart
                       </button>
-                    ))}
+                    )}
+                  </div>
+                  {subheading?.text && (
+                    <p className="text-[10px] uppercase tracking-[0.24em] text-neutral-500">
+                      {subheading.text}
+                    </p>
+                  )}
+                  {subheading?.html && (
+                    <div
+                      className="text-[10px] uppercase tracking-[0.24em] text-neutral-500"
+                      dangerouslySetInnerHTML={{ __html: subheading.html }}
+                    />
+                  )}
+                </div>
+
+                {hasSizes && (
+                  <section ref={sizesSectionRef}>
+                    <div className="mb-4 flex items-center justify-between">
+                      <h2 className="text-[10px] uppercase tracking-[0.28em] text-neutral-500">
+                        Size
+                      </h2>
+                      <button
+                        type="button"
+                        onClick={() => canOpenSizeChart && setSizeChartOpen(true)}
+                        disabled={!canOpenSizeChart}
+                        className={`hidden text-[10px] uppercase tracking-[0.26em] underline-offset-4 transition lg:inline-flex ${
+                          canOpenSizeChart
+                            ? 'text-neutral-700 hover:underline'
+                            : 'cursor-not-allowed text-neutral-300'
+                        }`}
+                      >
+                        Size Chart
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-5 gap-2 sm:grid-cols-5 lg:grid-cols-4">
+                      {sizeOptions.map((size) => (
+                        <button
+                          key={size}
+                          type="button"
+                          onClick={() => setSelectedSize(size)}
+                          className={`rounded-lg border px-2 py-2 text-[9px] font-semibold uppercase tracking-[0.18em] transition sm:text-[10px] ${
+                            selectedSize === size
+                              ? 'border-neutral-900 bg-neutral-900 text-white'
+                              : 'border-neutral-300 bg-neutral-50 text-neutral-600 hover:border-neutral-900 hover:text-neutral-900'
+                          }`}
+                        >
+                          {size}
+                        </button>
+                      ))}
                   </div>
                 </section>
               )}
@@ -863,34 +968,34 @@ const ProductDetails = () => {
                       })();
 
                   return (
-                    <table className="w-full border-collapse text-sm text-neutral-700 text-center md:text-left">
-                      <thead className="text-[11px] uppercase tracking-[0.2em] text-neutral-500 bg-neutral-50">
-                        <tr>
-                          <th className="border-b border-neutral-200 px-3 py-2 text-center md:text-left">Size</th>
-                          {autoColumns.map((col) => (
-                            <th
-                              key={col.key}
-                              className="border-b border-neutral-200 px-3 py-2 text-center md:text-left"
-                            >
-                              {col.label}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {sizeChartRows.map((row) => (
-                          <tr key={row.size} className="text-neutral-700">
-                            <td className="border-b border-neutral-100 px-3 py-2 text-[11px] uppercase tracking-[0.15em] text-center md:text-left">
-                              {row.size}
-                            </td>
+                      <table className="w-full border-collapse border border-neutral-400 text-[11px] uppercase tracking-[0.22em] text-neutral-900 text-center">
+                        <thead className="bg-white text-[10px] font-semibold tracking-[0.24em] text-neutral-900">
+                          <tr>
+                            <th className="border border-neutral-300 px-3 py-2 text-center">Size</th>
                             {autoColumns.map((col) => (
-                              <td
-                                key={`${row.size}-${col.key}`}
-                                className="border-b border-neutral-100 px-3 py-2 text-center md:text-left"
+                              <th
+                                key={col.key}
+                                className="border border-neutral-300 px-3 py-2 text-center"
                               >
-                                {row[col.key] ?? '-'}
-                              </td>
+                                {col.label}
+                              </th>
                             ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sizeChartRows.map((row) => (
+                            <tr key={row.size} className="text-neutral-800">
+                              <td className="border border-neutral-300 px-3 py-2 text-center font-semibold">
+                                {row.size}
+                              </td>
+                              {autoColumns.map((col) => (
+                                <td
+                                  key={`${row.size}-${col.key}`}
+                                  className="border border-neutral-300 px-3 py-2 text-center"
+                                >
+                                  {row[col.key] ?? '-'}
+                                </td>
+                              ))}
                           </tr>
                         ))}
                       </tbody>

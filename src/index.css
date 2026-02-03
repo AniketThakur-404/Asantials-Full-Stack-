@@ -7,8 +7,8 @@
 
 :root {
   color-scheme: light;
-  --font-header: "VCR OSD Mono", "Inter", "Helvetica Neue", Helvetica, Arial, monospace;
   --font-body: "VCR OSD Mono", "Inter", "Helvetica Neue", Helvetica, Arial, monospace;
+  --font-header: var(--font-body);
   --marquee-bar-h: 26px;
   --marquee-duration: 14s;
   --marquee-fade: 18px;
@@ -60,11 +60,30 @@ body {
   @apply bg-neutral-50 text-neutral-900 antialiased;
 }
 
+@media (max-width: 1023px) {
+  html,
+  body {
+    overflow-x: hidden;
+  }
+}
+
+button,
+input,
+select,
+textarea,
+option {
+  font-family: inherit;
+}
+
 .font-header {
   font-family: var(--font-header);
 }
 
 .font-body {
+  font-family: var(--font-body);
+}
+
+.font-sans {
   font-family: var(--font-body);
 }
 

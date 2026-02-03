@@ -1,11 +1,12 @@
 // src/components/CartDrawer.jsx
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AnimatePresence, motion as Motion } from 'framer-motion';
+import { motion as Motion } from 'framer-motion';
 import { Minus, Plus, Trash2, X } from 'lucide-react';
 import { useCart } from '../contexts/cart-context';
 import { useCatalog } from '../contexts/catalog-context';
 import {
+  cartCreate,
   fetchProductByHandle,
   findVariantForSize,
   formatMoney,
@@ -17,6 +18,11 @@ const CartDrawer = ({ open, onClose }) => {
   const { items, updateQuantity, removeItem } = useCart();
   const { getProduct } = useCatalog();
   const [externalProducts, setExternalProducts] = useState({});
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [checkoutError, setCheckoutError] = useState(null);
+  const drawerRef = useRef(null);
+  const closeButtonRef = useRef(null);
+  const lastFocusedRef = useRef(null);
 
 
   const cartHandles = useMemo(
@@ -115,6 +121,7 @@ const CartDrawer = ({ open, onClose }) => {
     () => cartItems.filter((item) => !item.loading && item.product),
     [cartItems],
   );
+  const displayItems = useMemo(() => [...readyItems].reverse(), [readyItems]);
 
   const subtotalAmount = readyItems.reduce(
     (acc, item) => acc + (item.lineTotal?.amount ?? 0),
@@ -123,13 +130,41 @@ const CartDrawer = ({ open, onClose }) => {
   const subtotalCurrency = readyItems[0]?.lineTotal?.currency;
   const subtotalLabel = formatMoney(subtotalAmount, subtotalCurrency);
 
+  const resolveVariantId = (product, size) =>
+    findVariantForSize(product, size)?.id ?? null;
+
   useEffect(() => {
     if (!open) return undefined;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    const body = document.body;
+    const html = document.documentElement;
+    const previousBodyOverflow = body.style.overflow;
+    const previousHtmlOverflow = html.style.overflow;
+    body.style.overflow = 'hidden';
+    html.style.overflow = 'hidden';
     return () => {
-      document.body.style.overflow = previous;
+      body.style.overflow = previousBodyOverflow;
+      html.style.overflow = previousHtmlOverflow;
     };
+  }, [open]);
+
+  useEffect(() => {
+    if (open) {
+      lastFocusedRef.current = document.activeElement;
+      requestAnimationFrame(() => {
+        closeButtonRef.current?.focus();
+      });
+      return;
+    }
+
+    const drawer = drawerRef.current;
+    if (drawer && drawer.contains(document.activeElement)) {
+      const lastFocused = lastFocusedRef.current;
+      if (lastFocused && typeof lastFocused.focus === 'function') {
+        lastFocused.focus();
+      } else if (document.activeElement && typeof document.activeElement.blur === 'function') {
+        document.activeElement.blur();
+      }
+    }
   }, [open]);
 
   const handleViewBag = () => {
@@ -137,41 +172,151 @@ const CartDrawer = ({ open, onClose }) => {
     navigate('/cart');
   };
 
-  const handleCheckout = () => {
-    onClose();
-    navigate('/cart');
+  const handleCheckout = async () => {
+    if (!items.length || isCheckingOut) return;
+
+    setCheckoutError(null);
+    setIsCheckingOut(true);
+
+    try {
+      const productMap = new Map();
+
+      cartItems.forEach((item) => {
+        if (!item.loading && item.product) {
+          productMap.set(item.handle, item.product);
+        }
+      });
+
+      const handlesToFetch = cartHandles.filter((handle) => !productMap.has(handle));
+      const fetchErrors = [];
+
+      await Promise.all(
+        handlesToFetch.map(async (handle) => {
+          try {
+            const product = await fetchProductByHandle(handle);
+            if (product) {
+              productMap.set(handle, product);
+            } else {
+              fetchErrors.push(handle);
+            }
+          } catch (error) {
+            console.error(`Failed to fetch Shopify product "${handle}"`, error);
+            fetchErrors.push(handle);
+          }
+        }),
+      );
+
+      if (fetchErrors.length) {
+        setCheckoutError(
+          `Some products are not available in Shopify (handles: ${fetchErrors.join(
+            ', ',
+          )}). Update the handles in your catalog or publish those products before checking out.`,
+        );
+        return;
+      }
+
+      const missingVariants = [];
+      const lines = [];
+
+      for (const lineItem of cartItems) {
+        if (lineItem.loading || !lineItem.product) {
+          missingVariants.push({ handle: lineItem.handle, reason: 'product' });
+          continue;
+        }
+
+        const product = productMap.get(lineItem.handle);
+        if (!product) {
+          missingVariants.push({ handle: lineItem.handle, reason: 'product' });
+          continue;
+        }
+
+        const merchandiseId = resolveVariantId(product, lineItem.size);
+        if (!merchandiseId) {
+          missingVariants.push({
+            handle: lineItem.handle,
+            size: lineItem.size ?? null,
+            reason: 'variant',
+          });
+          continue;
+        }
+
+        const quantity = Number(lineItem.quantity ?? 1);
+        if (!Number.isFinite(quantity) || quantity < 1) continue;
+
+        lines.push({
+          merchandiseId,
+          quantity: Math.min(Math.floor(quantity), 99),
+        });
+      }
+
+      if (missingVariants.length) {
+        const messages = missingVariants.map((entry) =>
+          entry.reason === 'product'
+            ? `Product "${entry.handle}" is unavailable in Shopify.`
+            : `Variant for "${entry.handle}" with size "${entry.size ?? 'default'}" was not found.`,
+        );
+        setCheckoutError(messages.join(' '));
+        return;
+      }
+
+      if (!lines.length) {
+        setCheckoutError(
+          'Unable to prepare checkout for your items. Please refresh the page or contact support.',
+        );
+        return;
+      }
+
+      const cart = await cartCreate(lines);
+      const checkoutUrl = cart?.checkoutUrl;
+
+      if (!checkoutUrl) {
+        setCheckoutError('Checkout link unavailable. Please try again in a moment.');
+        return;
+      }
+
+      window.location.assign(checkoutUrl);
+    } catch (error) {
+      console.error('Shopify checkout failed', error);
+      setCheckoutError(
+        error instanceof Error && error.message
+          ? error.message
+          : 'We could not start the checkout. Please try again or reach out to support.',
+      );
+    } finally {
+      setIsCheckingOut(false);
+    }
   };
 
   return (
-    <AnimatePresence>
-      {open && (
-        <Motion.div
-          className="fixed inset-0 z-[998] flex"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-        >
-          <Motion.div
-            className="h-full w-full bg-black/40 backdrop-blur-sm"
-            onClick={onClose}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-          />
-          <Motion.aside
-            className="relative ml-auto flex h-full w-full max-w-md flex-col bg-white shadow-2xl"
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', stiffness: 260, damping: 28 }}
-          >
+    <Motion.div
+      className={`fixed inset-0 z-[998] overflow-hidden ${
+        open ? 'pointer-events-auto' : 'pointer-events-none'
+      }`}
+      initial={false}
+      animate={{ opacity: open ? 1 : 0 }}
+      transition={{ duration: 0.2, ease: 'easeOut' }}
+      inert={!open}
+    >
+      <Motion.div
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        onClick={onClose}
+        initial={false}
+        animate={{ opacity: open ? 1 : 0 }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
+      />
+      <Motion.aside
+        ref={drawerRef}
+        className="absolute right-0 top-0 flex h-full w-full max-w-none flex-col bg-white shadow-2xl sm:max-w-md"
+        initial={false}
+        animate={{ opacity: open ? 1 : 0, scale: open ? 1 : 0.98 }}
+        transition={{ type: 'tween', duration: 0.2, ease: 'easeOut' }}
+      >
             <header className="flex items-center justify-between border-b border-neutral-200 px-6 py-4">
               <h2 className="text-xs uppercase tracking-[0.35em] text-neutral-600">Your Cart</h2>
               <button
                 type="button"
                 onClick={onClose}
+                ref={closeButtonRef}
                 className="rounded-full border border-transparent p-2 transition hover:border-neutral-200"
                 aria-label="Close cart"
               >
@@ -186,7 +331,7 @@ const CartDrawer = ({ open, onClose }) => {
                 </p>
               ) : (
                 <div className="space-y-6">
-                  {readyItems.map((item) => {
+                  {displayItems.map((item) => {
                       const imageUrl = getProductImageUrl(item.product);
                       const unitPriceLabel = formatMoney(
                         item.unitPrice.amount,
@@ -199,7 +344,7 @@ const CartDrawer = ({ open, onClose }) => {
 
                       return (
                         <div key={item.id} className="flex gap-4">
-                          <div className="h-24 w-24 overflow-hidden rounded-xl bg-neutral-100">
+                          <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-neutral-100">
                             {imageUrl ? (
                               <img
                                 src={imageUrl}
@@ -213,16 +358,19 @@ const CartDrawer = ({ open, onClose }) => {
                               </div>
                             )}
                           </div>
-                          <div className="flex flex-1 flex-col justify-between text-xs uppercase tracking-[0.25em]">
-                            <div>
+                          <div className="flex flex-1 flex-col gap-2 text-[11px] uppercase tracking-[0.25em]">
+                            <div className="flex items-start justify-between gap-3">
                               <p className="text-neutral-900">{item.product.title}</p>
-                              <p className="mt-1 text-neutral-500">{unitPriceLabel}</p>
-                              {item.size && (
-                                <p className="mt-1 text-neutral-500">Size {item.size}</p>
-                              )}
+                              <span className="whitespace-nowrap text-neutral-900">
+                                {lineTotalLabel}
+                              </span>
                             </div>
-                            <div className="mt-2 flex items-center justify-between text-neutral-600">
-                              <div className="flex items-center rounded-full border border-neutral-200">
+                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-neutral-500">
+                              <span>{unitPriceLabel}</span>
+                              {item.size && <span>Size: {item.size}</span>}
+                            </div>
+                            <div className="mt-1 flex items-center justify-between text-neutral-600">
+                              <div className="flex items-center rounded-lg border border-neutral-300">
                                 <button
                                   type="button"
                                   aria-label="Decrease quantity"
@@ -262,7 +410,6 @@ const CartDrawer = ({ open, onClose }) => {
                                 <Trash2 className="h-4 w-4" />
                               </button>
                             </div>
-                            <div className="mt-2 text-neutral-900">{lineTotalLabel}</div>
                           </div>
                         </div>
                       );
@@ -284,10 +431,10 @@ const CartDrawer = ({ open, onClose }) => {
                 <button
                   type="button"
                   onClick={handleCheckout}
-                  disabled={readyItems.length === 0}
+                  disabled={readyItems.length === 0 || isCheckingOut}
                   className="w-full rounded-full bg-neutral-900 py-3 text-[11px] uppercase tracking-[0.35em] text-white transition duration-200 hover:bg-neutral-800 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  Checkout
+                  {isCheckingOut ? 'Redirecting…' : 'Checkout'}
                 </button>
                 <button
                   type="button"
@@ -297,11 +444,14 @@ const CartDrawer = ({ open, onClose }) => {
                   View Full Cart
                 </button>
               </div>
+              {checkoutError && (
+                <p className="mt-4 rounded-2xl border border-red-400 bg-red-50 px-4 py-3 text-[10px] uppercase tracking-[0.2em] text-red-700">
+                  {checkoutError}
+                </p>
+              )}
             </footer>
-          </Motion.aside>
-        </Motion.div>
-      )}
-    </AnimatePresence>
+      </Motion.aside>
+    </Motion.div>
   );
 };
 

@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronDown, Menu, Search, ShoppingCart, X } from 'lucide-react';
+import { motion as Motion } from 'framer-motion';
 import { useCart } from '../contexts/cart-context';
 
 const categoryAliases = {
@@ -70,6 +71,20 @@ const Navbar = ({ onSearchClick = () => {}, onCartClick = () => {} }) => {
     clearCloseTimeout();
     setDesktopDropdown(null);
   }, [location.pathname, location.search]);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return undefined;
+    const body = document.body;
+    const html = document.documentElement;
+    const previousBodyOverflow = body.style.overflow;
+    const previousHtmlOverflow = html.style.overflow;
+    body.style.overflow = 'hidden';
+    html.style.overflow = 'hidden';
+    return () => {
+      body.style.overflow = previousBodyOverflow;
+      html.style.overflow = previousHtmlOverflow;
+    };
+  }, [mobileMenuOpen]);
 
   const shoeDropdownLinks = [
     { href: '/shoes/loafers', value: 'loafers', label: 'LOAFERS' },
@@ -172,10 +187,10 @@ const Navbar = ({ onSearchClick = () => {}, onCartClick = () => {} }) => {
         scrolled ? 'bg-neutral-100' : 'bg-neutral-100'
       }`}
     >
-      <div className="site-shell h-[84px] w-full sm:h-[92px] md:h-[104px]">
-        <div className="grid h-full grid-cols-[1fr_auto_1fr] items-center gap-4 lg:grid-cols-[1fr_auto_1fr]">
+      <div className="site-shell h-[64px] w-full sm:h-[72px] md:h-[82px]">
+        <div className="grid h-full grid-cols-[auto_1fr_auto] items-center gap-4 lg:grid-cols-[1fr_auto_1fr]">
           {/* Left: Nav */}
-          <div className="flex items-center gap-3 justify-self-start lg:gap-6">
+          <div className="flex w-24 items-center gap-3 justify-self-start sm:w-auto lg:gap-6">
             <button
               type="button"
               className={`relative flex items-center gap-2 rounded-full border border-neutral-900 px-3 py-1 text-[10px] tracking-[0.32em] text-neutral-900 transition lg:hidden ${
@@ -210,14 +225,14 @@ const Navbar = ({ onSearchClick = () => {}, onCartClick = () => {} }) => {
           </div>
 
           {/* Right: Actions */}
-          <div className="flex items-center justify-end gap-8 sm:gap-10 lg:gap-14 xl:gap-16">
+          <div className="flex w-24 items-center justify-end gap-3 sm:w-auto sm:gap-10 lg:gap-14 xl:gap-16">
             <button
               type="button"
               onClick={onSearchClick}
-              className="sm:hidden rounded-full border border-neutral-300 p-2 text-neutral-700 transition hover:border-neutral-900 hover:text-neutral-900"
+              className="sm:hidden flex h-9 w-9 items-center justify-center rounded-full border border-neutral-300 text-neutral-700 transition hover:border-neutral-900 hover:text-neutral-900"
               aria-label="Search"
             >
-              <Search className="h-4 w-4" strokeWidth={1.5} />
+              <Search className="h-5 w-5" strokeWidth={1.5} />
             </button>
             <button
               type="button"
@@ -236,11 +251,11 @@ const Navbar = ({ onSearchClick = () => {}, onCartClick = () => {} }) => {
               type="button"
               onClick={onCartClick}
               aria-label="Cart"
-              className="relative flex items-center gap-2 uppercase tracking-[0.25em] text-[11px] text-neutral-700 transition hover:text-neutral-900"
+              className="relative flex h-9 w-9 items-center justify-center gap-0 rounded-full border border-neutral-300 uppercase tracking-[0.25em] text-[11px] text-neutral-700 transition hover:border-neutral-900 hover:text-neutral-900 sm:h-auto sm:w-auto sm:justify-start sm:gap-2 sm:rounded-none sm:border-0"
             >
-              <ShoppingCart className="h-4 w-4" strokeWidth={1.5} />
+              <ShoppingCart className="h-5 w-5 sm:h-4 sm:w-4" strokeWidth={1.5} />
               {totalItems > 0 && (
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-900 text-[10px] font-semibold text-white">
+                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-neutral-900 text-[10px] font-semibold text-white sm:static sm:translate-x-0 sm:translate-y-0">
                   {totalItems}
                 </span>
               )}
@@ -251,25 +266,40 @@ const Navbar = ({ onSearchClick = () => {}, onCartClick = () => {} }) => {
       </div>
 
       {/* Mobile menu overlay */}
-      <div
-        id="primary-navigation"
-        className={`lg:hidden fixed inset-0 z-40 transition ${
-          mobileMenuOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
-        }`}
-      >
-        <button
+        <Motion.div
+          id="primary-navigation"
+          className={`fixed inset-0 z-40 lg:hidden ${
+            mobileMenuOpen ? 'pointer-events-auto' : 'pointer-events-none'
+          }`}
+          initial={false}
+          animate={{ opacity: mobileMenuOpen ? 1 : 0 }}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
+        >
+        <Motion.button
           type="button"
           aria-hidden
           onClick={() => setMobileMenuOpen(false)}
-          className={`absolute inset-0 bg-black/40 transition ${mobileMenuOpen ? 'opacity-100' : 'opacity-0'}`}
+          className="absolute inset-0 bg-black/40"
+          initial={false}
+          animate={{ opacity: mobileMenuOpen ? 1 : 0 }}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
         />
-        <nav
-          className={`absolute left-0 top-0 flex h-full w-[82%] max-w-sm flex-col gap-2 bg-white px-5 pb-8 pt-6 shadow-2xl transition-transform duration-300 ${
-            mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-          }`}
+        <Motion.nav
+          className="absolute left-0 top-0 flex h-full w-full max-w-none flex-col gap-0 bg-white px-5 pb-8 pt-6 shadow-2xl"
+          initial={false}
+          animate={{ x: mobileMenuOpen ? 0 : '-100%' }}
+          transition={{ type: 'tween', duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         >
-          <div className="mb-4 text-[11px] uppercase tracking-[0.32em] text-neutral-500">
-            Menu
+          <div className="mb-0 flex items-center justify-between border-b border-neutral-200 pb-4 text-[11px] uppercase tracking-[0.32em] text-neutral-500">
+            <span>Menu</span>
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(false)}
+              className="rounded-full border border-transparent p-2 text-neutral-700 transition hover:border-neutral-200 hover:text-neutral-900"
+              aria-label="Close menu"
+            >
+              <X className="h-4 w-4" strokeWidth={1.5} />
+            </button>
           </div>
           <button
             type="button"
@@ -277,7 +307,7 @@ const Navbar = ({ onSearchClick = () => {}, onCartClick = () => {} }) => {
               onSearchClick();
               setMobileMenuOpen(false);
             }}
-            className="flex items-center justify-between rounded border border-neutral-200 px-4 py-3 text-[11px] uppercase tracking-[0.3em] text-neutral-700 transition hover:border-neutral-900 hover:text-neutral-900"
+            className="flex items-center justify-between border-b border-neutral-200 px-1 py-4 text-[11px] uppercase tracking-[0.3em] text-neutral-700 transition hover:text-neutral-900"
           >
             Search
             <span aria-hidden>⌕</span>
@@ -288,7 +318,7 @@ const Navbar = ({ onSearchClick = () => {}, onCartClick = () => {} }) => {
             const isDropdownOpen = mobileDropdown === link.value;
 
             return (
-              <div key={`mobile-${link.value}`} className="border-b border-neutral-200 pb-3">
+              <div key={`mobile-${link.value}`} className="border-b border-neutral-200 py-4">
                 <div className="flex items-center justify-between gap-2">
                   <Link
                     to={link.href}
@@ -338,8 +368,8 @@ const Navbar = ({ onSearchClick = () => {}, onCartClick = () => {} }) => {
               </div>
             );
           })}
-        </nav>
-      </div>
+        </Motion.nav>
+      </Motion.div>
     </header>
   );
 };
