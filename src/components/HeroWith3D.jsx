@@ -27,7 +27,7 @@ export default function HeroWith3D({ heroVideoSrc }) {
   return (
     <section
       ref={sectionRef}
-      className="relative flex w-full flex-col overflow-hidden bg-neutral-900 min-h-[580px] md:h-[88vh] md:min-h-[700px]"
+      className="relative flex w-full flex-col overflow-hidden bg-neutral-900 min-h-[580px] md:h-[88vh] md:min-h-[700px] lg:h-screen lg:min-h-screen"
     >
       <video
         className="absolute inset-0 z-10 h-full w-full object-cover"

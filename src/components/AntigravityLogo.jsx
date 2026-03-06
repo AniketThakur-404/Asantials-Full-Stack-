@@ -1,13 +1,10 @@
 import React, { Suspense, useRef } from 'react';
-import { Canvas, useFrame, useLoader } from '@react-three/fiber';
-import { STLLoader } from 'three/examples/jsm/loaders/STLLoader';
+import { Canvas, useFrame } from '@react-three/fiber';
 import {
     Float,
     Environment,
     Stars,
     ContactShadows,
-    Text3D,
-    Center,
 } from '@react-three/drei';
 import * as THREE from 'three';
 
@@ -27,49 +24,21 @@ function InteractiveModel({ children, mouse }) {
     return <group ref={ref}>{children}</group>;
 }
 
-// Fallback text component if STL is not available
-function FloatingText() {
+// Simple fallback geometry that does not rely on external font JSON assets.
+function FloatingFallbackShape() {
     return (
         <Float speed={1.5} rotationIntensity={0.5} floatIntensity={1} floatingRange={[0, 0.5]}>
-            <Center>
-                <Text3D
-                    font="/fonts/helvetiker_regular.typeface.json"
-                    size={3}
-                    height={0.5}
-                    curveSegments={12}
-                    bevelEnabled
-                    bevelThickness={0.1}
-                    bevelSize={0.05}
-                    bevelOffset={0}
-                    bevelSegments={5}
-                >
-                    EVRYDAE
+            <group>
+                <mesh scale={14}>
+                    <torusKnotGeometry args={[0.9, 0.28, 180, 24, 2, 3]} />
                     <meshStandardMaterial
                         color="#ffffff"
                         metalness={1.0}
                         roughness={0.05}
                         side={THREE.DoubleSide}
                     />
-                </Text3D>
-            </Center>
-        </Float>
-    );
-}
-
-// Component to load STL model
-function FloatingSTLModel({ stlPath }) {
-    const geometry = useLoader(STLLoader, stlPath);
-
-    return (
-        <Float speed={1.5} rotationIntensity={0.5} floatIntensity={1} floatingRange={[0, 0.5]}>
-            <mesh geometry={geometry} rotation={[0, 0, 0]} scale={0.30}>
-                <meshStandardMaterial
-                    color="#ffffff"
-                    metalness={1.0}
-                    roughness={0.05}
-                    side={THREE.DoubleSide}
-                />
-            </mesh>
+                </mesh>
+            </group>
         </Float>
     );
 }
@@ -98,7 +67,8 @@ export default function AntigravityLogo({ stlPath = null, className = '' }) {
                 {/* INTERACTIVE FLOATING MODEL */}
                 <Suspense fallback={null}>
                     <InteractiveModel mouse={mouse.current}>
-                        {stlPath ? <FloatingSTLModel stlPath={stlPath} /> : <FloatingText />}
+                        {/* {stlPath ? <FloatingSTLModel stlPath={stlPath} /> : <FloatingFallbackShape />} */}
+                        {/* <FloatingFallbackShape /> */}
                     </InteractiveModel>
                 </Suspense>
 

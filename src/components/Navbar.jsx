@@ -126,7 +126,7 @@ const Navbar = ({ onSearchClick = () => {}, onCartClick = () => {} }) => {
             className={`${navItem} ${
               isActive
                 ? 'font-semibold text-neutral-900 before:opacity-100'
-                : 'text-neutral-600 hover:text-neutral-900 hover:after:opacity-60 hover:after:scale-x-100'
+                : 'text-neutral-700 hover:text-neutral-900 hover:after:opacity-60 hover:after:scale-x-100'
             }`}
             aria-haspopup="true"
             aria-expanded={isOpen}
@@ -173,7 +173,7 @@ const Navbar = ({ onSearchClick = () => {}, onCartClick = () => {} }) => {
         className={`${navItem} ${
           isActive
             ? 'font-semibold text-neutral-900 before:opacity-100'
-            : 'text-neutral-600 hover:text-neutral-900 hover:after:opacity-60 hover:after:scale-x-100'
+            : 'text-neutral-700 hover:text-neutral-900 hover:after:opacity-60 hover:after:scale-x-100'
         }`}
       >
         {link.label}
@@ -237,13 +237,13 @@ const Navbar = ({ onSearchClick = () => {}, onCartClick = () => {} }) => {
             <button
               type="button"
               onClick={onSearchClick}
-              className="hidden sm:block uppercase tracking-[0.25em] text-[11px] text-neutral-700 hover:text-neutral-900"
+              className="hidden sm:block uppercase tracking-[0.25em] text-[11px] font-semibold text-neutral-700 hover:text-neutral-900"
             >
               SEARCH
             </button>
             <Link
               to="/login"
-              className="hidden sm:block uppercase tracking-[0.25em] text-[11px] text-neutral-700 hover:text-neutral-900"
+              className="hidden sm:block uppercase tracking-[0.25em] text-[11px] font-semibold text-neutral-700 hover:text-neutral-900"
             >
               LOGIN
             </Link>
@@ -251,7 +251,7 @@ const Navbar = ({ onSearchClick = () => {}, onCartClick = () => {} }) => {
               type="button"
               onClick={onCartClick}
               aria-label="Cart"
-              className="relative flex h-9 w-9 items-center justify-center gap-0 rounded-full border border-neutral-300 uppercase tracking-[0.25em] text-[11px] text-neutral-700 transition hover:border-neutral-900 hover:text-neutral-900 sm:h-auto sm:w-auto sm:justify-start sm:gap-2 sm:rounded-none sm:border-0"
+              className="relative flex h-9 w-9 items-center justify-center gap-0 rounded-full border border-neutral-300 uppercase tracking-[0.25em] text-[11px] font-semibold text-neutral-700 transition hover:border-neutral-900 hover:text-neutral-900 sm:h-auto sm:w-auto sm:justify-start sm:gap-2 sm:rounded-none sm:border-0"
             >
               <ShoppingCart className="h-5 w-5 sm:h-4 sm:w-4" strokeWidth={1.5} />
               {totalItems > 0 && (

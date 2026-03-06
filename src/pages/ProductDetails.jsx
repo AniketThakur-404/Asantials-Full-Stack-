@@ -602,7 +602,7 @@ const ProductDetails = () => {
           <Breadcrumbs title={product.title} className="mb-2" />
         </div>
 
-        <div className="grid gap-10 lg:grid-cols-[minmax(340px,440px)_minmax(0,1fr)_minmax(320px,380px)] lg:items-start lg:gap-14">
+        <div className="grid gap-10 lg:grid-cols-[minmax(240px,320px)_minmax(0,1fr)_minmax(220px,300px)] lg:items-start lg:gap-8 xl:grid-cols-[minmax(320px,420px)_minmax(0,1fr)_minmax(280px,360px)] xl:gap-14">
           {/* Info column */}
           <div className="order-3 space-y-8 lg:order-1 lg:sticky lg:top-24 lg:self-start">
             <div className="hidden lg:block">
@@ -631,7 +631,7 @@ const ProductDetails = () => {
                 {infoSections.map((section, index) => (
                   <section
                     key={section.key}
-                    className={`grid gap-4 items-start sm:grid-cols-[140px_minmax(0,1fr)] ${index > 0 ? 'border-t border-neutral-200 pt-6' : ''
+                    className={`space-y-3 ${index > 0 ? 'border-t border-neutral-200 pt-6' : ''
                       }`}
                   >
                     <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-900">
@@ -667,7 +667,7 @@ const ProductDetails = () => {
                       <img
                         src={image.url}
                         alt={image.alt ?? `${product.title} view ${index + 1}`}
-                        className="aspect-[4/5] w-full object-cover"
+                        className="aspect-[4/5] w-full object-fill"
                         loading={index === 0 ? 'eager' : 'lazy'}
                         onClick={() => scrollToImage(index)}
                       />
@@ -721,7 +721,7 @@ const ProductDetails = () => {
                     key={image.url ?? index}
                     src={image.url}
                     alt={image.alt ?? `${product.title} view ${index + 1}`}
-                    className="w-full max-w-[900px] rounded border border-neutral-200 bg-neutral-200 object-cover"
+                    className="w-full aspect-[4/5] max-w-[900px] rounded border border-neutral-200 bg-neutral-200 object-fill"
                     loading={index === 0 ? 'eager' : 'lazy'}
                   />
                 ))
@@ -745,7 +745,7 @@ const ProductDetails = () => {
                     <img
                       src={image.url}
                       alt={image.alt ?? `${product.title} thumbnail ${index + 1}`}
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-fill"
                       loading="lazy"
                     />
                   </button>
@@ -754,81 +754,78 @@ const ProductDetails = () => {
             )}
           </div>
 
-            {/* Actions column */}
-            <div className="order-2 lg:order-3 lg:sticky lg:top-24 lg:self-start">
-              <div className="space-y-6 border border-neutral-200 bg-white p-6">
-                <div className="space-y-2 lg:hidden">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 space-y-1 pr-2">
-                      <h2 className="text-[15px] font-semibold uppercase leading-tight tracking-[0.2em] text-neutral-900 break-words sm:text-lg">
-                        {product.title}
-                      </h2>
-                      <p className="text-[12px] tracking-[0.14em] text-neutral-600 sm:text-[13px]">
-                        {priceLabel}
-                      </p>
-                    </div>
-                    {hasSizes && (
-                      <button
-                        type="button"
-                        onClick={() => canOpenSizeChart && setSizeChartOpen(true)}
-                        disabled={!canOpenSizeChart}
-                        className={`shrink-0 rounded-full px-4 py-2 text-[10px] uppercase tracking-[0.22em] transition ${
-                          canOpenSizeChart
-                            ? 'bg-neutral-900 text-white'
-                            : 'cursor-not-allowed bg-neutral-200 text-neutral-400'
-                        }`}
-                      >
-                        Size Chart
-                      </button>
-                    )}
-                  </div>
-                  {subheading?.text && (
-                    <p className="text-[10px] uppercase tracking-[0.24em] text-neutral-500">
-                      {subheading.text}
+          {/* Actions column */}
+          <div className="order-2 lg:order-3 lg:sticky lg:top-24 lg:self-start">
+            <div className="space-y-6 border border-neutral-200 bg-white p-6">
+              <div className="space-y-2 lg:hidden">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 pr-2">
+                    <h2 className="text-[15px] font-semibold uppercase leading-tight tracking-[0.2em] text-neutral-900 break-words sm:text-lg">
+                      {product.title}
+                    </h2>
+                    <p className="mt-1 text-[13px] tracking-[0.14em] text-neutral-700 sm:text-sm">
+                      {priceLabel}
                     </p>
-                  )}
-                  {subheading?.html && (
-                    <div
-                      className="text-[10px] uppercase tracking-[0.24em] text-neutral-500"
-                      dangerouslySetInnerHTML={{ __html: subheading.html }}
-                    />
+                  </div>
+                  {hasSizes && (
+                    <button
+                      type="button"
+                      onClick={() => canOpenSizeChart && setSizeChartOpen(true)}
+                      disabled={!canOpenSizeChart}
+                      className={`shrink-0 rounded-full px-4 py-2 text-[10px] uppercase tracking-[0.22em] transition ${canOpenSizeChart
+                        ? 'bg-neutral-900 text-white'
+                        : 'cursor-not-allowed bg-neutral-200 text-neutral-400'
+                        }`}
+                    >
+                      Size Chart
+                    </button>
                   )}
                 </div>
+                {subheading?.text && (
+                  <p className="text-[10px] uppercase tracking-[0.24em] text-neutral-500">
+                    {subheading.text}
+                  </p>
+                )}
+                {subheading?.html && (
+                  <div
+                    className="text-[10px] uppercase tracking-[0.24em] text-neutral-500"
+                    dangerouslySetInnerHTML={{ __html: subheading.html }}
+                  />
+                )}
+              </div>
 
-                {hasSizes && (
-                  <section ref={sizesSectionRef}>
-                    <div className="mb-4 flex items-center justify-between">
-                      <h2 className="text-[10px] uppercase tracking-[0.28em] text-neutral-500">
-                        Size
-                      </h2>
-                      <button
-                        type="button"
-                        onClick={() => canOpenSizeChart && setSizeChartOpen(true)}
-                        disabled={!canOpenSizeChart}
-                        className={`hidden text-[10px] uppercase tracking-[0.26em] underline-offset-4 transition lg:inline-flex ${
-                          canOpenSizeChart
-                            ? 'text-neutral-700 hover:underline'
-                            : 'cursor-not-allowed text-neutral-300'
+              {hasSizes && (
+                <section ref={sizesSectionRef}>
+                  <div className="mb-4 flex items-center justify-between">
+                    <h2 className="text-[10px] uppercase tracking-[0.28em] text-neutral-500">
+                      Size
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => canOpenSizeChart && setSizeChartOpen(true)}
+                      disabled={!canOpenSizeChart}
+                      className={`hidden text-[10px] uppercase tracking-[0.26em] underline-offset-4 transition lg:inline-flex ${canOpenSizeChart
+                        ? 'text-neutral-700 hover:underline'
+                        : 'cursor-not-allowed text-neutral-300'
                         }`}
-                      >
-                        Size Chart
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-5 gap-2 sm:grid-cols-5 lg:grid-cols-4">
-                      {sizeOptions.map((size) => (
-                        <button
-                          key={size}
-                          type="button"
-                          onClick={() => setSelectedSize(size)}
-                          className={`rounded-lg border px-2 py-2 text-[9px] font-semibold uppercase tracking-[0.18em] transition sm:text-[10px] ${
-                            selectedSize === size
-                              ? 'border-neutral-900 bg-neutral-900 text-white'
-                              : 'border-neutral-300 bg-neutral-50 text-neutral-600 hover:border-neutral-900 hover:text-neutral-900'
+                    >
+                      Size Chart
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-5 gap-2 sm:grid-cols-5 lg:grid-cols-4">
+                    {sizeOptions.map((size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() => setSelectedSize(size)}
+                        className={`rounded-lg border px-2 py-2 text-[9px] font-semibold uppercase tracking-[0.18em] transition sm:text-[10px] ${selectedSize === size
+                          ? 'border-neutral-900 bg-neutral-900 text-white'
+                          : 'border-neutral-300 bg-neutral-50 text-neutral-600 hover:border-neutral-900 hover:text-neutral-900'
                           }`}
-                        >
-                          {size}
-                        </button>
-                      ))}
+                      >
+                        {size}
+                      </button>
+                    ))}
                   </div>
                 </section>
               )}
@@ -968,34 +965,34 @@ const ProductDetails = () => {
                       })();
 
                   return (
-                      <table className="w-full border-collapse border border-neutral-400 text-[11px] uppercase tracking-[0.22em] text-neutral-900 text-center">
-                        <thead className="bg-white text-[10px] font-semibold tracking-[0.24em] text-neutral-900">
-                          <tr>
-                            <th className="border border-neutral-300 px-3 py-2 text-center">Size</th>
+                    <table className="w-full border-collapse border border-neutral-400 text-[11px] uppercase tracking-[0.22em] text-neutral-900 text-center">
+                      <thead className="bg-white text-[10px] font-semibold tracking-[0.24em] text-neutral-900">
+                        <tr>
+                          <th className="border border-neutral-300 px-3 py-2 text-center">Size</th>
+                          {autoColumns.map((col) => (
+                            <th
+                              key={col.key}
+                              className="border border-neutral-300 px-3 py-2 text-center"
+                            >
+                              {col.label}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sizeChartRows.map((row) => (
+                          <tr key={row.size} className="text-neutral-800">
+                            <td className="border border-neutral-300 px-3 py-2 text-center font-semibold">
+                              {row.size}
+                            </td>
                             {autoColumns.map((col) => (
-                              <th
-                                key={col.key}
+                              <td
+                                key={`${row.size}-${col.key}`}
                                 className="border border-neutral-300 px-3 py-2 text-center"
                               >
-                                {col.label}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {sizeChartRows.map((row) => (
-                            <tr key={row.size} className="text-neutral-800">
-                              <td className="border border-neutral-300 px-3 py-2 text-center font-semibold">
-                                {row.size}
+                                {row[col.key] ?? '-'}
                               </td>
-                              {autoColumns.map((col) => (
-                                <td
-                                  key={`${row.size}-${col.key}`}
-                                  className="border border-neutral-300 px-3 py-2 text-center"
-                                >
-                                  {row[col.key] ?? '-'}
-                                </td>
-                              ))}
+                            ))}
                           </tr>
                         ))}
                       </tbody>
@@ -1050,7 +1047,7 @@ const ProductDetails = () => {
               <img
                 src={heroImage}
                 alt={product.title}
-                className="h-full w-full object-cover"
+                className="h-full w-full object-contain"
               />
             </div>
 
